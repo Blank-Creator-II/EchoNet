@@ -1,0 +1,25 @@
+@model EchoNet.ViewModels.PlayerViewModel
+
+<h1>Player</h1>
+
+<p>Current Song: @Model.CurrentSongTitle</p>
+<ul>
+@foreach (Song song in Model.Songs)
+{
+    <li>
+        <form asp-controller="Player" asp-action="Play" method="post">
+            <input type="hidden" name="filePath" value="@song.FilePath" />
+            <input type="hidden" name="title" value="@song.Title" />
+            <button type="submit">Play @song.Title</button>
+        </form>
+    </li>
+}
+</ul>
+
+<form asp-controller="Player" asp-action="Pause" method="post">
+    <button type="submit">Pause</button>
+</form>
+
+<form asp-controller="Player" asp-action="Stop" method="post">
+    <button type="submit">Stop</button>
+</form>
