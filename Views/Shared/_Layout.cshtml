@@ -1,8 +1,49 @@
 ﻿<!DOCTYPE html>
+
+@inject EchoNet.Services.IThemeService ThemeService
+@{
+    var theme = ThemeService.GetTheme();
+}
+
 <html>
 <head>
     <meta charset="utf-8" />
     <title>EchoNet</title>
+    <style>
+    :root {
+        --name: @theme.Name;
+        --mode: @theme.Mode;
+
+        --bg: @theme.Background;
+        --surface: @theme.Surface;
+        --surface-2: @theme.SurfaceAlt;
+
+        --text: @theme.Text;
+        --muted: @theme.MutedText;
+
+        --accent: @theme.Accent;
+        --accent-hover: @theme.AccentHover;
+        --accent-active: @theme.AccentActive;
+
+        --border: @theme.Border;
+        --border-hover: @theme.BorderHover;
+        --border-focus: @theme.BorderFocus;
+
+        --focus-ring: @theme.FocusRing;
+
+        --text-on-accent: @theme.TextOnAccent;
+
+        --button-secondary-bg: @theme.ButtonSecondaryBg;
+        --button-secondary-hover-bg: @theme.ButtonSecondaryHoverBg;
+        --button-secondary-text: @theme.ButtonSecondaryText;
+
+        --input-bg: @theme.InputBg;
+        --input-placeholder: @theme.InputPlaceholder;
+
+        --disabled-bg: @theme.DisabledBg;
+        --disabled-text: @theme.DisabledText;
+    }
+    </style>
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>

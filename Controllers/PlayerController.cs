@@ -8,16 +8,19 @@ namespace EchoNet.Controllers;
 public class PlayerController : Controller
 {
     private readonly IAudioService _audio;
+    private readonly IThemeService _theme;
     private readonly ILogger<PlayerController> _logger;
 
-    public PlayerController(IAudioService audio, ILogger<PlayerController> logger)
+    public PlayerController(IAudioService audio, IThemeService theme, ILogger<PlayerController> logger)
     {
         _audio = audio;
+        _theme = theme;
         _logger = logger;
     }
 
     public IActionResult Index()
     {
+        _theme.SetTheme("Crimson Cream"); //currently hard coded
         var vm = new PlayerViewModel
         {
             Songs = new List<Song>
@@ -56,6 +59,7 @@ public class PlayerController : Controller
     public IActionResult Pause()
     {
         _audio.Pause();
+        TempData["CurrentSong"] =  _audio.IsPlaying ? null : "title";
         return RedirectToAction(nameof(Index));
     }
 
@@ -63,6 +67,7 @@ public class PlayerController : Controller
     public IActionResult Stop()
     {
         _audio.Stop();
+        TempData["CurrentSong"] = null;
         return RedirectToAction("Index");
     }
 }

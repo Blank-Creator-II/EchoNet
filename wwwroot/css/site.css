@@ -1,12 +1,12 @@
 body {
-    background: #0f0f12;
-    color: white;
+    background: var(--bg);
+    color: var(--accent);
     font-family: Arial, sans-serif;
 }
 
 button {
-    background: #1f1f2a;
-    color: white;
+    background: var(--surface);
+    color: var(--accent);
     border: 1px solid #333;
     padding: 10px 14px;
     border-radius: 8px;
@@ -14,5 +14,6 @@ button {
 }
 
 button:hover {
-    background: #2a2a3a;
+    background: var(--accent-hover);
+    color: var(--bg);
 }

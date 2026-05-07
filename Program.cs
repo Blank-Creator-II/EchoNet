@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 // Add singleton
 builder.Services.AddSingleton<IAudioService, VlcAudioService>();
+builder.Services.AddSingleton<IThemeService, ThemeService>();
 
 var app = builder.Build();
 
