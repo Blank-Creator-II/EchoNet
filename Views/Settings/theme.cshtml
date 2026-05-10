@@ -1,0 +1,63 @@
+@inject EchoNet.Services.IThemeService ThemeService
+@{
+    Theme theme = ThemeService.GetTheme();
+    List<Theme> themes = ThemeService.GetAllThemes();
+}
+
+<aside class="wrapper">
+
+    <div class="topbar">
+      <div>
+        <div class="title">Theme Settings</div>
+        <div class="subtitle">Customize your interface appearance</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-resetTheme" onclick="resetTheme()">
+          Reset
+        </button>
+
+        <button class="btn-saveTheme" onclick="Toast.show('Theme saved')">
+          Save Changes
+        </button>
+      </div>
+    </div>
+
+    <div class="current-theme">
+
+      <div class="theme-info">
+
+        <div class="swatches">
+          <div class="swatch sw-bg"></div>
+          <div class="swatch sw-surface"></div>
+          <div class="swatch sw-accent"></div>
+        </div>
+
+        <div>
+          <div class="active-label">Active Theme</div>
+          <div class="active-theme">
+            @theme.Name
+          </div>
+        </div>
+
+      </div>
+
+      <div class="live">● Live Preview</div>
+
+    </div>
+
+    <div class="section">
+      <h2>Choose a Theme</h2>
+      <p>Click any theme to apply instantly</p>
+    </div>
+
+    <link rel="stylesheet" href="~/css/settings/themeCard.css">
+    <div class="theme-grid">
+      @foreach (Theme t in themes)
+      {
+          <partial name="themeCard" model="t"/>
+      }
+    </div>
+
+    <script src="~/js/settings/themeSwitcher.js"></script>
+</aside>

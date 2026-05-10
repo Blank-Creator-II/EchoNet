@@ -1,0 +1,167 @@
+/* theme part container */
+.wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Top bar */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.subtitle {
+    margin-top: 4px;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    font-family: monospace;
+    text-transform: uppercase;
+}
+
+/* Actions container */
+.actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Buttons */
+.btn-resetTheme,
+.btn-saveTheme {
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+}
+
+/* Save button override */
+.btn-saveTheme {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    font-weight: 700;
+}
+
+.btn-saveTheme:hover {
+    background: var(--accent-hover);
+}
+
+.btn-resetTheme:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Current theme box */
+.current-theme {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: 20px 24px;
+    margin-bottom: 32px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow:0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+/* Theme info section */
+.theme-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Swatches */
+.swatches {
+    display: flex;
+    gap: 6px;
+}
+
+.swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border-color: var(--muted);
+    border-style: solid;
+    border-width: 1px;
+}
+
+.sw-bg {
+    background: var(--bg);
+}
+
+.sw-surface {
+    background: var(--surface);
+}
+
+.sw-accent {
+    background: var(--accent);
+}
+
+/* Labels */
+.active-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: monospace;
+}
+
+.active-theme {
+    margin-top: 4px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+/* Live badge */
+.live {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-family: monospace;
+}
+
+/* Section */
+.section {
+    margin-bottom: 20px;
+}
+
+.section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    color: var(--text);
+}
+
+.section p {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-family: monospace;
+    letter-spacing: 0.08em;
+}
+
+/* Grid  */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 28px;
+    margin-top: 24px;
+}

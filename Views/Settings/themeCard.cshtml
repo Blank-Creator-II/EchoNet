@@ -1,0 +1,61 @@
+@model EchoNet.Models.Theme
+
+@{
+    string[]? parts = Model.Name.Split(separator: ' ', StringSplitOptions.RemoveEmptyEntries);
+    string? firstPart = parts.FirstOrDefault();
+    string? lastPart = parts.LastOrDefault();
+}
+
+<aside>
+  <div class="container">
+    <div class="canvas-wrapper"
+        onclick="selectTheme(this)"
+        data-theme="@Model.Name"
+        data-mode="@Model.Mode"
+
+        data-background="@Model.Background"
+        data-surface="@Model.Surface"
+        data-surface-alt="@Model.SurfaceAlt"
+
+        data-text="@Model.Text"
+        data-muted-text="@Model.MutedText"
+
+        data-accent="@Model.Accent"
+        data-accent-hover="@Model.AccentHover"
+        data-accent-active="@Model.AccentActive"
+
+        data-border="@Model.Border"
+        data-border-hover="@Model.BorderHover"
+        data-border-focus="@Model.BorderFocus"
+
+        data-focus-ring="@Model.FocusRing"
+        data-text-on-accent="@Model.TextOnAccent"
+
+        data-button-secondary-bg="@Model.ButtonSecondaryBg"
+        data-button-secondary-hover-bg="@Model.ButtonSecondaryHoverBg"
+        data-button-secondary-text="@Model.ButtonSecondaryText"
+
+        data-input-bg="@Model.InputBg"
+        data-input-placeholder="@Model.InputPlaceholder"
+
+        data-disabled-bg="@Model.DisabledBg"
+        data-disabled-text="@Model.DisabledText"
+        style="
+          --card-accent: @Model.Accent;
+          --card-bg: @Model.Background;
+          --card-surface: @Model.Surface;
+          --card-mode: '@Model.Mode';">
+      <canvas class="fc"></canvas>
+
+      <div class="card-label top-label">
+          <p>@firstPart</p>
+      </div>
+
+      <div class="card-label bottom-label">
+          <p>@lastPart</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="~/js/settings/themeCard.js"></script>
+</aside>

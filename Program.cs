@@ -1,6 +1,8 @@
 using EchoNet.Services;
+using EchoNet.Data;
 using LibVLCSharp.Shared;
 using System.Runtime.InteropServices;
+using Microsoft.EntityFrameworkCore;
 
 // Load LibVLCSharp from the bundled libraries
 if (OperatingSystem.IsWindows())
@@ -20,6 +22,9 @@ builder.Services.AddControllersWithViews();
 // Add singleton
 builder.Services.AddSingleton<IAudioService, VlcAudioService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
+// Add database
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 

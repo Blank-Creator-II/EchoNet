@@ -1,3 +1,23 @@
+@font-face {
+    font-family: 'Space Grotesk';
+    src: url('/font/SpaceGrotesk-Variable.woff2') format('woff2');
+    font-weight: 300 700;
+    font-style: normal;
+}
+
+body,
+.sidebar,
+.content,
+.card,
+button,
+input,
+.panel {
+    transition:
+        background-color 0.45s ease,
+        color 0.45s ease,
+        border-color 0.45s ease,
+        box-shadow 0.45s ease;
+}
 html,
 body {
     margin: 0;

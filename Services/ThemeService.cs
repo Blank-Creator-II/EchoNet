@@ -36,4 +36,43 @@ public class ThemeService : IThemeService
             PropertyNameCaseInsensitive = true
         }) ?? new Theme();
     }
+
+    public List<Theme> GetAllThemes()
+    {
+        var themes = new List<Theme>();
+
+        var themeFolder = Path.Combine(_env.WebRootPath, "theme");
+
+        if (!Directory.Exists(themeFolder))
+        {
+            _logger.LogWarning("Theme folder does not exist at {Path}", themeFolder);
+            return themes;
+        }
+
+        var jsonFiles = Directory.GetFiles(themeFolder, "*.json");
+
+        foreach (var file in jsonFiles)
+        {
+            try
+            {
+                var json = File.ReadAllText(file);
+
+                var theme = JsonSerializer.Deserialize<Theme>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (theme != null)
+                {
+                    themes.Add(theme);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load theme from {File}", file);
+            }
+        }
+
+        return themes;
+    }
 }
