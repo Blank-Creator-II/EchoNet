@@ -7,7 +7,7 @@ public class ThemeService : IThemeService
 {
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<ThemeService> _logger;
-    private string _currentTheme = "default";
+    private string? _currentTheme;
 
     public ThemeService(IWebHostEnvironment env, ILogger<ThemeService> logger)
     {
@@ -27,7 +27,7 @@ public class ThemeService : IThemeService
 
         if (!File.Exists(path))
         {
-            path = Path.Combine(_env.WebRootPath, "theme", "default.json");
+            path = Path.Combine(_env.WebRootPath, "theme", "Crimson Shadow.json");
         }
 
         var json = File.ReadAllText(path);

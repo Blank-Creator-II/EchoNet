@@ -20,7 +20,7 @@ public class PlayerController : Controller
 
     public IActionResult Index()
     {
-        _theme.SetTheme("Crimson Cream"); //currently hard coded
+        //_theme.SetTheme("Verdant Glow"); //currently hard coded
         var vm = new PlayerViewModel
         {
             Songs = new List<Song>
