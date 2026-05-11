@@ -33,6 +33,9 @@ window.selectTheme = async function (card) {
     root.style.setProperty('--disabled-bg', card.dataset.disabledBg);
     root.style.setProperty('--disabled-text', card.dataset.disabledText);
 
+    // Change the preview bar name
+    document.getElementById("active-name").textContent = card.dataset.theme;
+
     // Send new theme data to bakend
     const themeName = card.dataset.theme;
     await fetch('/Settings/ChangeTheme', {

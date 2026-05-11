@@ -151,6 +151,7 @@ a, a:visited, a:hover, a:active {
         color var(--transition),
         box-shadow var(--transition),
         transform 0.15s ease;
+    fill: var(--button-secondary-text);
 }
 
 .sidebar-btn:hover:not(.active) {
@@ -162,7 +163,7 @@ a, a:visited, a:hover, a:active {
 }
 
 .sidebar-btn.active {
-    background: color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 65%, transparent);
     color: var(--text-on-accent);
 
     box-shadow: inset 3px 0 0 var(--accent);
@@ -171,6 +172,7 @@ a, a:visited, a:hover, a:active {
     cursor: default;
     pointer-events: none;
     transform: translateX(0);
+    fill: var(--text-on-accent);
 }
 
 /* Focus ring for keyboard navigation */
@@ -328,6 +330,7 @@ a, a:visited, a:hover, a:active {
         background var(--transition),
         color var(--transition),
         transform 0.15s ease;
+    fill: var(--button-secondary-text);
 }
 
 .ctrl-btn:hover {
@@ -362,11 +365,6 @@ a, a:visited, a:hover, a:active {
 
 .ctrl-btn.play-btn:active {
     background: var(--accent-active);
-}
-
-.shuffle-active,
-.repeat-active {
-    color: var(--accent);
 }
 
 /* PROGRESS BAR */
@@ -455,6 +453,21 @@ a, a:visited, a:hover, a:active {
     color: var(--muted);
     cursor: pointer;
     font-size: 1.1rem;
+    transform: scale(0.8);
+    transition:
+        background var(--transition),
+        color var(--transition),
+        transform 0.15s ease;
+    fill: var(--button-secondary-text);
+}
+
+.volume-icon-btn:hover {
+    color: var(--text);
+    transform: scale(0.88);
+}
+
+.volume-icon-btn:active {
+    transform: scale(0.95);
 }
 
 .volume-icon-btn:focus-visible {
