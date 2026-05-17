@@ -6,89 +6,85 @@ public class VlcAudioService : IAudioService, IDisposable
 {
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _player;
-    private readonly object _lock = new();
     private readonly ILogger<VlcAudioService> _logger;
 
+    private Media? _currentMedia;
+
     public string? CurrentSong { get; private set; }
+
+    public TimeSpan Duration => _player.Length > 0 ? TimeSpan.FromMilliseconds(_player.Length) : TimeSpan.Zero;
+
+    public TimeSpan CurrentTime => _player.Time > 0 ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero;
+    public int Volume => _player.Volume;
     public bool IsPlaying => _player.IsPlaying;
 
     public VlcAudioService(ILogger<VlcAudioService> logger)
     {
         _logger = logger;
 
-        _libVlc = new LibVLC();
-        _player = new MediaPlayer(_libVlc);
+        Core.Initialize();
 
-        // Defaults
-        _player.Volume = 100;
+        _libVlc = new LibVLC();
+
+        _player = new MediaPlayer(_libVlc)
+        {
+            Volume = 100
+        };
 
         _logger.LogInformation("VLC Audio Service initialized");
     }
 
     public Task LoadAsync(string filePath)
     {
-        lock (_lock)
-        {
-            _logger.LogInformation($"Loading track: {filePath}");
+        _logger.LogInformation("Loading track: {FilePath}", filePath);
 
-            CurrentSong = filePath;
-            using var media = new Media(_libVlc, filePath, FromType.FromPath);
-            _player.Media = media;
-        }
+        _currentMedia?.Dispose();
+
+        _currentMedia = new Media(_libVlc, filePath, FromType.FromPath);
+
+        _player.Media = _currentMedia;
+
+        CurrentSong = filePath;
 
         return Task.CompletedTask;
     }
+
     public Task PlayAsync()
     {
-        lock (_lock)
-        {
-            _logger.LogInformation("Play Triggered");
-            _player.Play();
-        }
+        _logger.LogInformation("Play triggered");
+
+        _player.Play();
 
         return Task.CompletedTask;
     }
 
     public void Pause()
     {
-        lock (_lock)
-        {
-            _logger.LogInformation($"Song {(_player.IsPlaying ? "Paused" : "Playing")}");
-            _player.Pause();
-        }
+        _logger.LogInformation("Toggling pause");
+
+        _player.Pause();
     }
 
     public void Stop()
     {
-        lock (_lock)
-        {
-            _logger.LogInformation($"Song Stoped");
-            _player.Stop();
-        }
+        _logger.LogInformation("Playback stopped");
+
+        _player.Stop();
     }
 
     public void SetVolume(int volume)
     {
-        lock (_lock)
-        {
-            _player.Volume = Math.Clamp(volume, 0, 100);
-        }
+        _player.Volume = Math.Clamp(volume, 0, 100);
     }
 
     public void Seek(TimeSpan position)
     {
-        lock (_lock)
-        {
-            if (_player.Length > 0)
-            {
-                var ratio = (double)position.TotalMilliseconds / _player.Length;
-                _player.Position = (float)Math.Clamp(ratio, 0.0, 1.0);
-            }
-        }
+        _player.Time = (long)position.TotalMilliseconds;
     }
 
     public void Dispose()
     {
+        _currentMedia?.Dispose();
         _player.Dispose();
         _libVlc.Dispose();
     }

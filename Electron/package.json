@@ -1,0 +1,15 @@
+{
+  "name": "EchoNet",
+  "version": "0.1",
+  "main": "boot.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^41.6.1"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "tree-kill": "^1.2.2"
+  }
+}

@@ -1,3 +1,11 @@
+@inject EchoNet.Services.IAudioService AudioService
+@{
+    var progress_fraction =
+        AudioService.Duration.TotalSeconds > 0
+            ? AudioService.CurrentTime.TotalSeconds / AudioService.Duration.TotalSeconds
+            : 0;
+}
+
 <footer class="player-bar">
 
     <!-- LEFT -->
@@ -47,18 +55,23 @@
                 </svg>
             </button>
 
-            <form asp-controller="Player" asp-action="Pause" method="post">
-                <button class="ctrl-btn play-btn" id="playPauseBtn" title="Play / Pause">
-                    <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        height="34px" 
-                        viewBox="0 -960 960 960" 
-                        width="34px" 
-                        fill="var(--bg)">
+            <button class="ctrl-btn play-btn" id="playPauseBtn" title="Play / Pause">
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    height="34px" 
+                    viewBox="0 -960 960 960" 
+                    width="34px" 
+                    fill="var(--bg)">
+                    @if (AudioService.IsPlaying)
+                    {
+                        <path d="M240-200v-560h160v560H240Zm320 0v-560h160v560H560Z"/>
+                    }
+                    else
+                    {
                         <path d="M320-200v-560l440 280-440 280Z"/>
-                    </svg>
-                </button>
-            </form>
+                    }
+                </svg>
+            </button>
 
             <button class="ctrl-btn" title="Next">
                 <svg 
@@ -95,20 +108,26 @@
 
         <div class="progress-container">
 
-            <span class="progress-time">
-                1:42
+            <span class="progress-time" id="currentTime">
+                @(AudioService.CurrentTime.ToString(@"m\:ss"))
             </span>
 
-            <div class="progress-bar-track">
+            <div class="progress-bar-track" id="progressTrack">
 
                 <div class="progress-bar-fill"
-                     style="width: 38%;">
+                    id="progressFill"
+                    style="width:@(progress_fraction * 100)%">
+                </div>
+
+                <div class="progress-bar-thumb"
+                    id="progressThumb"
+                    style="left:@(progress_fraction * 100)%">
                 </div>
 
             </div>
 
-            <span class="progress-time">
-                4:20
+            <span class="progress-time" id="durationTime">
+                @(AudioService.Duration.ToString(@"m\:ss"))
             </span>
 
         </div>
@@ -128,20 +147,28 @@
             </svg>
         </button>
 
-        <button class="volume-icon-btn" title="Mute / Unmute">
+        <button class="volume-icon-btn" id="muteBtn" title="Mute / Unmute">
             <svg 
                 xmlns="http://www.w3.org/2000/svg" 
                 height="24px" 
                 viewBox="0 -960 960 960" 
                 width="24px">
-                <path d="M560-131v-82q90-26 145-100t55-168q0-94-55-168T560-749v-82q124 28 202 125.5T840-481q0 127-78 224.5T560-131ZM120-360v-240h160l200-200v640L280-360H120Zm440 40v-322q47 22 73.5 66t26.5 96q0 51-26.5 94.5T560-320ZM400-606l-86 86H200v80h114l86 86v-252ZM300-480Z"/>
+                @if (AudioService.Volume <= 0)
+                {
+                    <path d="M280-360v-240h160l200-200v640L440-360H280Zm80-80h114l86 86v-252l-86 86H360v80Zm100-40Z"/>
+                }
+                else
+                {
+                    <path d="M560-131v-82q90-26 145-100t55-168q0-94-55-168T560-749v-82q124 28 202 125.5T840-481q0 127-78 224.5T560-131ZM120-360v-240h160l200-200v640L280-360H120Zm440 40v-322q47 22 73.5 66t26.5 96q0 51-26.5 94.5T560-320ZM400-606l-86 86H200v80h114l86 86v-252ZM300-480Z"/>
+                }
             </svg>
         </button>
 
-        <div class="volume-slider-track">
+        <div class="volume-slider-track" id="volumeTrack">
 
             <div class="volume-slider-fill"
-                 style="width: 65%;">
+                id="volumeFill"
+                style="width:@(AudioService.Volume)%">
             </div>
 
         </div>

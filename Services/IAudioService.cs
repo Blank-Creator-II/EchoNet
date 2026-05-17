@@ -11,5 +11,8 @@ public interface IAudioService
     void SetVolume(int volume);
     void Seek(TimeSpan position);
     string? CurrentSong { get; }
+    TimeSpan CurrentTime { get; }
+    TimeSpan Duration { get; }
+    int Volume { get; }
     bool IsPlaying { get; }
 }

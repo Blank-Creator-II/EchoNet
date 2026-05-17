@@ -403,21 +403,28 @@ a, a:visited, a:hover, a:active {
 .progress-bar-fill {
     position: relative;
     height: 100%;
-    width: 38%;
+    width: 0%;
     border-radius: inherit;
     background: var(--accent);
+}
+
+#progressFill {
+    transition: width 120ms linear;
+}
+
+#progressThumb {
+    transition: left 120ms linear;
 }
 
 .progress-bar-track:hover .progress-bar-fill {
     background: var(--accent-hover);
 }
 
-.progress-bar-fill::after {
+.progress-bar-thumb {
     content: "";
     position: absolute;
-    right: -6px;
     top: 50%;
-    transform: translateY(-50%);
+    transform: translate(-50%, -50%);
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -426,7 +433,7 @@ a, a:visited, a:hover, a:active {
     transition: opacity 0.15s ease;
 }
 
-.progress-bar-track:hover .progress-bar-fill::after {
+.progress-bar-track:hover .progress-bar-thumb {
     opacity: 1;
 }
 
@@ -446,6 +453,7 @@ a, a:visited, a:hover, a:active {
     justify-content: flex-end;
     flex-shrink: 0;
 }
+
 
 .volume-icon-btn {
     background: none;
@@ -476,6 +484,10 @@ a, a:visited, a:hover, a:active {
     border-radius: 4px;
 }
 
+#volumeFill {
+    transition: width 180ms ease-out;
+}
+
 .volume-slider-track {
     position: relative;
     width: 90px;
@@ -492,7 +504,7 @@ a, a:visited, a:hover, a:active {
 
 .volume-slider-fill {
     position: relative;
-    width: 65%;
+    width: 100%;
     height: 100%;
     border-radius: inherit;
     background: var(--accent);

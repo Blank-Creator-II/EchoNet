@@ -8,31 +8,12 @@ namespace EchoNet.Controllers;
 public class PlayerController : Controller
 {
     private readonly IAudioService _audio;
-    private readonly IThemeService _theme;
     private readonly ILogger<PlayerController> _logger;
 
     public PlayerController(IAudioService audio, IThemeService theme, ILogger<PlayerController> logger)
     {
         _audio = audio;
-        _theme = theme;
         _logger = logger;
-    }
-
-    public IActionResult Index()
-    {
-        //_theme.SetTheme("Verdant Glow"); //currently hard coded
-        var vm = new PlayerViewModel
-        {
-            Songs = new List<Song>
-            {
-                new Song { Title="LOVE", FilePath="Test/LOVE. FEAT. ZACARI..mp3" },
-                new Song { Title="Kyouran", FilePath="Test/Kyouran Hey Kids!!.mp3" }
-            },
-            CurrentSongTitle = TempData["CurrentSong"]?.ToString() ?? "Nothing Loaded",
-            IsPlaying = _audio.IsPlaying
-        }; 
-
-        return View(vm);
     }
 
     [HttpPost("Player/Play")]
@@ -51,23 +32,47 @@ public class PlayerController : Controller
 
         _logger.LogInformation($"Now playing: {filePath}");
 
-        TempData["CurrentSong"] = title;
         return RedirectToAction("Index");
     }
 
-    [HttpPost("Player/Pause")]
-    public IActionResult Pause()
+    [HttpPost("Player/TogglePlay")]
+    public IActionResult TogglePlay()
     {
-        _audio.Pause();
-        TempData["CurrentSong"] =  _audio.IsPlaying ? null : "title";
-        return RedirectToAction(nameof(Index));
+        if (_audio.IsPlaying)
+            _audio.Pause();
+        else
+            _audio.PlayAsync();
+        
+        return Ok(new
+        {
+            isPlaying = !_audio.IsPlaying
+        });
     }
 
-    [HttpPost("Player/Stop")]
-    public IActionResult Stop()
+    [HttpGet("Player/Status")]
+    public IActionResult Status()
     {
-        _audio.Stop();
-        TempData["CurrentSong"] = null;
-        return RedirectToAction("Index");
+        return Json(new
+        {
+            currentTime = _audio.CurrentTime.TotalSeconds,
+            duration = _audio.Duration.TotalSeconds,
+            isPlaying = _audio.IsPlaying,
+            volume = _audio.Volume
+        });
+    }
+
+    [HttpPost("Player/Seek")]
+    public IActionResult Seek([FromBody] SeekRequest request)
+    {
+        _audio.Seek(TimeSpan.FromSeconds(request.Position));
+
+        return Ok();
+    }
+
+    [HttpPost("Player/Volume")]
+    public IActionResult Volume([FromBody] VolumeRequest request)
+    {
+        _audio.SetVolume(request.Volume);
+        return Ok();
     }
 }
