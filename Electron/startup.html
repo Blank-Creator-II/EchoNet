@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loading…</title>
+  <link rel="stylesheet" href="startup.css" />
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen" role="status" aria-live="polite" aria-label="Application loading">
+
+  <div class="loading-screen__grid"   aria-hidden="true"></div>
+
+  <div class="loading-screen__particles" aria-hidden="true">
+    <div class="ls-particle"></div>
+    <div class="ls-particle"></div>
+    <div class="ls-particle"></div>
+    <div class="ls-particle"></div>
+    <div class="ls-particle"></div>
+    <div class="ls-particle"></div>
+    <div class="ls-particle"></div>
+    <div class="ls-particle"></div>
+  </div>
+
+
+  <div class="loading-screen__content">
+
+    <div class="loading-screen__waveform-wrap" aria-hidden="true">
+
+      <div class="ls-edge-bar ls-edge-bar--left"></div>
+      <div class="ls-edge-bar ls-edge-bar--right"></div>
+
+      <div class="loading-screen__waveform loading-screen__waveform--ghost" id="waveformGhost"></div>
+
+      <div class="loading-screen__waveform" id="waveform"></div>
+    </div>
+
+
+    <h1 class="loading-screen__title">EchoNet</h1>
+    <p  class="loading-screen__tagline">Music Without Borders</p>
+
+    <div class="loading-screen__status-wrap">
+      <div class="loading-screen__dot" aria-hidden="true"></div>
+      <span class="loading-screen__status" id="statusText">Initializing audio engine...</span>
+      <span class="loading-screen__cursor" aria-hidden="true"></span>
+    </div>
+
+    <div class="loading-screen__progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progressTrack">
+      <div class="loading-screen__progress-fill" id="progressFill"></div>
+    </div>
+
+  </div>
+
+  <p class="loading-screen__version" aria-hidden="true">v0.1 &nbsp;·&nbsp; Starting server</p>
+
+</div>
+
+
+<script>
+  const statusMessages = [
+    'Warming up the speakers...',
+    'Digging through crates for your tracks...',
+    'Teaching electrons how to groove...',
+    'Tuning the audio engine by ear...',
+    'Untangling headphone cables virtually...',
+    'The first MP3 was tested with a cappella music.',
+    'Loading your taste in questionable midnight songs...',
+    'Convincing the bass not to overpower everything...',
+    'Vinyl records store sound as physical grooves.',
+    'Dusting off hidden gems from your library...',
+    'Making sure the snare hits emotionally...',
+    'Assembling tiny waves into big feelings...',
+    'Silence in music can create more tension than sound.',
+    'Spinning imaginary records...',
+    'Calibrating vibes...',
+    'Checking if your favorite song still slaps...',
+    'Loading album art prettier than the code behind it...',
+    'The longest officially released song is over 13 hours long.',
+    'Aligning rhythms and bad life decisions...',
+    'Preparing your next accidental repeat obsession...',
+    'Almost there — one more beat...',
+  ];
+
+  // Shuffle helper
+  function shuffle(array) {
+    const arr = [...array];
+
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+
+    return arr;
+  }
+
+  // Create randomized queue
+  let messageQueue = shuffle(statusMessages);
+
+  function getNextMessage() {
+    // Re-shuffle when exhausted
+    if (messageQueue.length === 0) {
+      messageQueue = shuffle(statusMessages);
+    }
+
+    return messageQueue.shift();
+  }
+
+  const BAR_COUNT = 52;
+
+  function buildBars(containerId, ghostMode) {
+    const container = document.getElementById(containerId);
+    const fragment  = document.createDocumentFragment();
+
+    for (let i = 0; i < BAR_COUNT; i++) {
+      const bar = document.createElement('div');
+      bar.className = ghostMode ? 'ls-bar ls-bar--ghost' : 'ls-bar';
+      bar.style.setProperty('--i', i);
+      fragment.appendChild(bar);
+    }
+
+    container.appendChild(fragment);
+  }
+
+  buildBars('waveform', false);
+  buildBars('waveformGhost', true);
+
+  let progress = 0;
+  const SOFT_CEIL = 88;
+
+  const progressFill  = document.getElementById('progressFill');
+  const progressTrack = document.getElementById('progressTrack');
+
+  const progressInterval = setInterval(() => {
+    if (progress >= SOFT_CEIL) return;
+
+    const remaining = SOFT_CEIL - progress;
+    const step = Math.random() * (remaining * 0.08) + 0.4;
+
+    progress = Math.min(progress + step, SOFT_CEIL);
+
+    setProgress(progress);
+  }, 340);
+
+  const statusEl = document.getElementById('statusText');
+
+  // Initial random message
+  swapStatus(getNextMessage());
+
+  const msgInterval = setInterval(() => {
+    swapStatus(getNextMessage());
+  }, 4000);
+
+  function setProgress(pct) {
+    progressFill.style.width = pct + '%';
+    progressTrack.setAttribute('aria-valuenow', Math.round(pct));
+  }
+
+  function swapStatus(text) {
+    statusEl.classList.add('is-changing');
+
+    setTimeout(() => {
+      statusEl.textContent = text;
+      statusEl.classList.remove('is-changing');
+    }, 200);
+  }
+
+  window.loadingComplete = function () {
+
+    clearInterval(progressInterval);
+    clearInterval(msgInterval);
+
+    progress = 100;
+    setProgress(100);
+
+    swapStatus('Ready!');
+
+    document.querySelector('.loading-screen__version').textContent =
+      'Server started';
+
+    const screen = document.getElementById('loadingScreen');
+
+    setTimeout(() => {
+      screen.classList.add('is-done');
+
+      screen.addEventListener(
+        'animationend',
+        () => screen.remove(),
+        { once: true }
+      );
+    }, 650);
+  };
+</script>
+
+</body>
+</html>

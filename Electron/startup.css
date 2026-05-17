@@ -1,0 +1,403 @@
+@font-face {
+    font-family: 'Bungee Shade';
+    src: url('startup-font/BungeeShade-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Space Mono';
+    src: url('startup-font/SpaceMono-Regular.woff2') format('woff2');
+    font-weight: 400 700;
+    font-style: normal;
+}
+
+/* --- CSS Custom Properties -------------------------------- */
+:root {
+  /* Core palette */
+  --ls-bg:              #151515;
+  --ls-surface:         #1e1e1e;
+
+  --ls-accent:          #dc143c;
+  --ls-accent-glow:     #b01030;
+  --ls-accent-dim:      #e1394c;
+
+  --ls-text:            #e0e0e0;
+  --ls-text-muted:      #8a8a8a;
+
+  --ls-scanline:        #252525;
+  --ls-border:          #333333;
+
+  /* Typography */
+  --ls-font-display:    'Bungee Shade', sans-serif;
+  --ls-font-mono:       'Space Mono', monospace;
+}
+
+
+/* --- Reset (scoped) --------------------------------------- */
+.loading-screen *,
+.loading-screen *::before,
+.loading-screen *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+
+/* --- Keyframes -------------------------------------------- */
+
+/* Waveform bar pulse */
+@keyframes ls-wave {
+  0%, 100% { transform: scaleY(0.07); opacity: 0.35; }
+  50%       { transform: scaleY(1);   opacity: 1;    }
+}
+
+/* Secondary (ghost) wave */
+@keyframes ls-wave-ghost {
+  0%, 100% { transform: scaleY(0.05); opacity: 0.08; }
+  50%       { transform: scaleY(0.7); opacity: 0.22; }
+}
+
+/* Ambient particle drift */
+@keyframes ls-particle {
+  0%   { transform: translateY(0)    scale(1);   opacity: 0;   }
+  15%  {                                          opacity: 0.6; }
+  85%  {                                          opacity: 0.3; }
+  100% { transform: translateY(-180px) scale(0.4); opacity: 0; }
+}
+
+/* Progress bar shimmer */
+@keyframes ls-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%);  }
+}
+
+/* Status text swap */
+@keyframes ls-status-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Full-screen fade out when complete */
+@keyframes ls-fade-out {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+/* Cursor blink for status line */
+@keyframes ls-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Subtle bg grid pulse */
+@keyframes ls-grid-breathe {
+  0%, 100% { opacity: 0.03; }
+  50%       { opacity: 0.07; }
+}
+
+/* Edge bars subtle glow pulse */
+@keyframes ls-edge-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.9; }
+}
+
+
+/* --- Root container --------------------------------------- */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--ls-bg);
+  font-family: var(--ls-font-mono);
+  overflow: hidden;
+
+  /* Entry fade-in */
+  animation: ls-status-in 0.4s ease both;
+}
+
+/* Exit state — call window.loadingComplete() to trigger */
+.loading-screen.is-done {
+  animation: ls-fade-out 0.7s 0.3s ease forwards;
+}
+
+
+/* --- Background effects ----------------------------------- */
+
+/* Scanlines overlay */
+.loading-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--ls-scanline) 0px,
+    var(--ls-scanline) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle dot-grid background */
+.loading-screen__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: ls-grid-breathe 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* --- Particles -------------------------------------------- */
+.loading-screen__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ls-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ls-accent);
+  opacity: 0;
+  animation: ls-particle linear infinite;
+}
+
+.ls-particle:nth-child(1)  { left: 12%; bottom: 30%; animation-duration: 8s;  animation-delay: 0s; }
+.ls-particle:nth-child(2)  { left: 25%; bottom: 20%; animation-duration: 11s; animation-delay: 2s; width: 2px; height: 2px; }
+.ls-particle:nth-child(3)  { left: 38%; bottom: 35%; animation-duration: 9s;  animation-delay: 4s; }
+.ls-particle:nth-child(4)  { left: 52%; bottom: 25%; animation-duration: 7s;  animation-delay: 1s; width: 2px; height: 2px; }
+.ls-particle:nth-child(5)  { left: 65%; bottom: 40%; animation-duration: 12s; animation-delay: 3s; }
+.ls-particle:nth-child(6)  { left: 78%; bottom: 22%; animation-duration: 10s; animation-delay: 5s; width: 2px; height: 2px; }
+.ls-particle:nth-child(7)  { left: 88%; bottom: 32%; animation-duration: 8s;  animation-delay: 1.5s; }
+.ls-particle:nth-child(8)  { left: 5%;  bottom: 45%; animation-duration: 13s; animation-delay: 3.5s; width: 2px; height: 2px; }
+
+
+/* --- Main content ----------------------------------------- */
+.loading-screen__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 600px;
+  padding: 0 2rem;
+}
+
+/* --- Waveform --------------------------------------------- */
+.loading-screen__waveform-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 2.75rem;
+}
+
+/* Primary bar container */
+.loading-screen__waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 88px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ghost (secondary) waveform — sits behind */
+.loading-screen__waveform--ghost {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  z-index: 0;
+}
+
+/* Each bar */
+.ls-bar {
+  width: 4px;
+  height: 88px;
+  background: var(--ls-accent);
+  border-radius: 2px;
+  transform-origin: center;
+  transform: scaleY(0.07);
+  flex-shrink: 0;
+  animation: ls-wave 1.4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.052s);
+}
+
+.ls-bar--ghost {
+  background: var(--ls-accent);
+  animation-name: ls-wave-ghost;
+  animation-duration: 1.8s;
+  animation-delay: calc(var(--i) * -0.052s + 0.7s);
+}
+
+
+/* --- Edge containment bars ---------------------------- */
+.ls-edge-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ls-accent);
+  border-radius: 1px;
+  z-index: 3;
+  animation: ls-edge-pulse 2.8s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--ls-accent-glow);
+}
+
+.ls-edge-bar--left {
+  left: 37px;
+  animation-delay: 0s;
+}
+
+.ls-edge-bar--right {
+  right: 37px;
+  animation-delay: 1.4s;
+}
+
+
+/* --- Title & tagline -------------------------------------- */
+.loading-screen__title {
+  font-family: var(--ls-font-display);
+  font-size: clamp(2.8rem, 8vw, 4.2rem);
+  font-weight: 800;
+  color: var(--ls-accent);
+  letter-spacing: 0.1em;
+  line-height: 0.4;
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.loading-screen__tagline {
+  font-family: var(--ls-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ls-text-muted);
+  margin-bottom: 2.5rem;
+}
+
+
+/* --- Status message --------------------------------------- */
+.loading-screen__status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1.1rem;
+  height: 20px;
+}
+
+/* Amber dot indicator */
+.loading-screen__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ls-accent);
+  flex-shrink: 0;
+  animation: ls-blink 1.1s step-start infinite;
+}
+
+.loading-screen__status {
+  font-family: var(--ls-font-mono);
+  font-size: 12px;
+  color: var(--ls-accent);
+  letter-spacing: 0.04em;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.loading-screen__status.is-changing {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+/* Blinking cursor after status text */
+.loading-screen__cursor {
+  display: inline-block;
+  width: 1px;
+  height: 13px;
+  background: var(--ls-accent);
+  margin-left: 3px;
+  vertical-align: middle;
+  animation: ls-blink 0.9s step-start infinite;
+}
+
+
+/* --- Progress bar ----------------------------------------- */
+.loading-screen__progress-track {
+  width: 100%;
+  max-width: 380px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+}
+
+.loading-screen__progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--ls-accent);
+  border-radius: 1px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer on the progress fill */
+.loading-screen__progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+
+    color-mix(in srgb, var(--ls-accent) 35%, var(--ls-surface)) 35%,
+
+    color-mix(in srgb, var(--ls-accent) 55%, var(--ls-surface)) 50%,
+
+    color-mix(in srgb, var(--ls-accent) 40%, var(--ls-surface)) 55%,
+
+    color-mix(in srgb, var(--ls-accent) 25%, var(--ls-surface)) 70%,
+
+    transparent 100%
+  );
+
+  transform: translateX(-100%);
+  animation: ls-shimmer 1.4s linear infinite;
+
+  mix-blend-mode: screen;
+}
+
+
+/* --- Bottom version label --------------------------------- */
+.loading-screen__version {
+  position: absolute;
+  bottom: 1.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--ls-font-mono);
+  font-size: 10px;
+  color: var(--ls-text-muted);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  z-index: 2;
+}
+

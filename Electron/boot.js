@@ -30,34 +30,66 @@ async function createWindow() {
         title: "EchoNet",
         width: 1200,
         height: 800,
+        show: false,
         autoHideMenuBar: true,
+        backgroundColor: '#1c1d1e', // avoids white flash
         webPreferences: {
-            preload: path.join(__dirname, 'bridge.js')
+            preload: path.join(__dirname, 'bridge.js'),
         }
     });
 
-    // Give backend time to start (polling)
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        const key = input.key.toLowerCase();
+
+        // Ctrl+R / Cmd+R
+        const reloadShortcut =
+            key === 'r' && (input.control || input.meta);
+
+        // F5
+        const f5 = key === 'f5';
+
+        if (reloadShortcut || f5) {
+            event.preventDefault();
+
+            console.log('[Electron]: Reload blocked during loading screen');
+        }
+    });
+
+    // Load startup screen immediately
+    await mainWindow.loadFile(path.join(__dirname, 'startup.html'));
+    mainWindow.show();
+
+    // Utility sleep helper
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Wait for backend readiness
     async function waitForServer() {
+
+        // Begin polling
         for (let i = 0; i < 40; i++) {
             try {
-                console.log(`[Electron]: Checking server... attempt ${i}`);
+                console.log(`[Electron]: Checking server... attempt ${i + 1}/60`); // 1 min check
 
                 const res = await fetch('http://127.0.0.1:9292/ready');
+
                 console.log("[Electron]: STATUS:", res.status);
 
                 const text = await res.text();
                 const parsed = JSON.parse(text);
+
                 console.log("[Electron]: BODY:", parsed);
 
                 if (res.status === 200 && parsed === "READY") {
                     console.log("[Electron]: Server READY");
                     return true;
                 }
-            } catch (err) {
+            }
+            catch (err) {
                 console.log("[Electron]: Fetch error:", err.message);
             }
 
-            await new Promise(r => setTimeout(r, 500));
+            // 1sec between checks
+            await sleep(1000);
         }
 
         console.log("[Electron]: Server never became ready");
@@ -76,17 +108,46 @@ async function createWindow() {
         console.error('[Electron]: Renderer crashed');
     });
 
+    // Wait until backend is available
     const isUp = await waitForServer();
+
     if (!isUp) {
         console.error("[Electron]: Backend failed to start.");
         app.quit();
         return;
     }
 
+    // Trigger startup animation completion
+    try {
+        await mainWindow.webContents.executeJavaScript(`
+            if (window.loadingComplete) {
+                window.loadingComplete();
+            }
+        `);
+    }
+    catch (err) {
+        console.error("[Electron]: Failed to trigger loadingComplete()", err);
+    }
+
     console.log("[Electron]: Loading UI");
+
+    // Load actual app
     await mainWindow.loadURL("http://127.0.0.1:9292");
 
-    //mainWindow.webContents.openDevTools({ mode: 'detach' });
+    console.log('[Electron]: Reload unblocked');
+    // Re-enable reloads after startup screen is gone
+    mainWindow.webContents.removeAllListeners('before-input-event');
+
+    await mainWindow.webContents.executeJavaScript(`
+        document.body.style.opacity = '0';
+        document.body.style.transition = 'opacity 500ms ease';
+
+        requestAnimationFrame(() => {
+            document.body.style.opacity = '1';
+        });
+    `);
+
+    // mainWindow.webContents.openDevTools({ mode: 'detach' });
 }
 
 app.whenReady().then(async () => {
