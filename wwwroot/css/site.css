@@ -181,6 +181,11 @@ a, a:visited, a:hover, a:active {
     box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+.sidebar-btn.active:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
 .btn-icon {
     width: 24px;
     height: 24px;
@@ -365,6 +370,11 @@ a, a:visited, a:hover, a:active {
 
 .ctrl-btn.play-btn:active {
     background: var(--accent-active);
+}
+
+.ctrl-btn.play-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* PROGRESS BAR */

@@ -66,7 +66,7 @@ async function createWindow() {
     async function waitForServer() {
 
         // Begin polling
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 60; i++) {
             try {
                 console.log(`[Electron]: Checking server... attempt ${i + 1}/60`); // 1 min check
 
@@ -92,7 +92,14 @@ async function createWindow() {
             await sleep(1000);
         }
 
+        await mainWindow.loadURL("about:blank");
         console.log("[Electron]: Server never became ready");
+        await dialog.showMessageBox({
+            type: "error",
+            title: "Server Startup Failed",
+            message: "The backend server never became ready.",
+            buttons: ["OK"],
+        });
         return false;
     }
 
@@ -167,15 +174,34 @@ app.on('before-quit', async (event) => {
     try {
         console.log("[Electron]: Sending shutdown request");
 
-        await fetch('http://127.0.0.1:9292/shutdown', {
-            method: 'POST'
+        const controller = new AbortController();
+
+        const timeout = setTimeout(() => {
+            controller.abort();
+        }, 5000);
+
+        await fetch("http://127.0.0.1:9292/shutdown", {
+            method: "POST",
+            signal: controller.signal,
         });
+
+        clearTimeout(timeout);
     }
     catch (err) {
         console.error("[Electron]: Shutdown failed", err);
         console.log("[Electron]: Forcing a Shutdown");
+
+        await dialog.showMessageBox({
+            type: "error",
+            title: "Shutdown Failed",
+            message:
+                "The backend server did not accept the shutdown signal.\n\n" +
+                "Electron will try to forcefully terminate the backend process.",
+            buttons: ["OK"],
+        });
+
         if (backendProcess?.pid) {
-            treeKill(backendProcess.pid);
+            treeKill(backendProcess.pid, "SIGKILL");
         }
     }
 
