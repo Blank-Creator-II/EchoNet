@@ -1,50 +1,149 @@
-window.selectTheme = async function (card) {
-    // Apply theme to frontend
+let selectedTheme = null;
+let originalTheme = null;
+
+// Store all original values on page load
+document.addEventListener("DOMContentLoaded", () => {
+
     const root = document.documentElement;
 
-    root.style.setProperty('--name', card.dataset.theme);
-    root.style.setProperty('--mode', card.dataset.mode);
+    originalTheme = {
+        name: document.getElementById("active-name").textContent.trim(),
 
-    root.style.setProperty('--bg', card.dataset.background);
-    root.style.setProperty('--surface', card.dataset.surface);
-    root.style.setProperty('--surface-2', card.dataset.surfaceAlt);
+        background: getComputedStyle(root).getPropertyValue('--bg'),
+        surface: getComputedStyle(root).getPropertyValue('--surface'),
+        surfaceAlt: getComputedStyle(root).getPropertyValue('--surface-2'),
 
-    root.style.setProperty('--text', card.dataset.text);
-    root.style.setProperty('--muted', card.dataset.mutedText);
+        text: getComputedStyle(root).getPropertyValue('--text'),
+        mutedText: getComputedStyle(root).getPropertyValue('--muted'),
 
-    root.style.setProperty('--accent', card.dataset.accent);
-    root.style.setProperty('--accent-hover', card.dataset.accentHover);
-    root.style.setProperty('--accent-active', card.dataset.accentActive);
+        accent: getComputedStyle(root).getPropertyValue('--accent'),
+        accentHover: getComputedStyle(root).getPropertyValue('--accent-hover'),
+        accentActive: getComputedStyle(root).getPropertyValue('--accent-active'),
 
-    root.style.setProperty('--border', card.dataset.border);
-    root.style.setProperty('--border-hover', card.dataset.borderHover);
-    root.style.setProperty('--border-focus', card.dataset.borderFocus);
+        border: getComputedStyle(root).getPropertyValue('--border'),
+        borderHover: getComputedStyle(root).getPropertyValue('--border-hover'),
+        borderFocus: getComputedStyle(root).getPropertyValue('--border-focus'),
 
-    root.style.setProperty('--focus-ring', card.dataset.focusRing);
-    root.style.setProperty('--text-on-accent', card.dataset.textOnAccent);
+        focusRing: getComputedStyle(root).getPropertyValue('--focus-ring'),
+        textOnAccent: getComputedStyle(root).getPropertyValue('--text-on-accent'),
 
-    root.style.setProperty('--button-secondary-bg', card.dataset.buttonSecondaryBg);
-    root.style.setProperty('--button-secondary-hover-bg', card.dataset.buttonSecondaryHoverBg);
-    root.style.setProperty('--button-secondary-text', card.dataset.buttonSecondaryText);
+        buttonSecondaryBg: getComputedStyle(root).getPropertyValue('--button-secondary-bg'),
+        buttonSecondaryHoverBg: getComputedStyle(root).getPropertyValue('--button-secondary-hover-bg'),
+        buttonSecondaryText: getComputedStyle(root).getPropertyValue('--button-secondary-text'),
 
-    root.style.setProperty('--input-bg', card.dataset.inputBg);
-    root.style.setProperty('--input-placeholder', card.dataset.inputPlaceholder);
+        inputBg: getComputedStyle(root).getPropertyValue('--input-bg'),
+        inputPlaceholder: getComputedStyle(root).getPropertyValue('--input-placeholder'),
 
-    root.style.setProperty('--disabled-bg', card.dataset.disabledBg);
-    root.style.setProperty('--disabled-text', card.dataset.disabledText);
+        disabledBg: getComputedStyle(root).getPropertyValue('--disabled-bg'),
+        disabledText: getComputedStyle(root).getPropertyValue('--disabled-text')
+    };
+});
 
-    // Change the preview bar name
-    document.getElementById("active-name").textContent = card.dataset.theme;
+function applyTheme(theme) {
 
-    // Send new theme data to bakend
-    const themeName = card.dataset.theme;
-    await fetch('/Settings/ChangeTheme', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-            themeName: themeName
-        })
-    });
+    const root = document.documentElement;
+
+    root.style.setProperty('--bg', theme.background);
+    root.style.setProperty('--surface', theme.surface);
+    root.style.setProperty('--surface-2', theme.surfaceAlt);
+
+    root.style.setProperty('--text', theme.text);
+    root.style.setProperty('--muted', theme.mutedText);
+
+    root.style.setProperty('--accent', theme.accent);
+    root.style.setProperty('--accent-hover', theme.accentHover);
+    root.style.setProperty('--accent-active', theme.accentActive);
+
+    root.style.setProperty('--border', theme.border);
+    root.style.setProperty('--border-hover', theme.borderHover);
+    root.style.setProperty('--border-focus', theme.borderFocus);
+
+    root.style.setProperty('--focus-ring', theme.focusRing);
+    root.style.setProperty('--text-on-accent', theme.textOnAccent);
+
+    root.style.setProperty('--button-secondary-bg', theme.buttonSecondaryBg);
+    root.style.setProperty('--button-secondary-hover-bg', theme.buttonSecondaryHoverBg);
+    root.style.setProperty('--button-secondary-text', theme.buttonSecondaryText);
+
+    root.style.setProperty('--input-bg', theme.inputBg);
+    root.style.setProperty('--input-placeholder', theme.inputPlaceholder);
+
+    root.style.setProperty('--disabled-bg', theme.disabledBg);
+    root.style.setProperty('--disabled-text', theme.disabledText);
+
+    document.getElementById("active-name").textContent = theme.name;
+}
+
+window.selectTheme = function (card) {
+
+    selectedTheme = {
+        name: card.dataset.theme,
+
+        background: card.dataset.background,
+        surface: card.dataset.surface,
+        surfaceAlt: card.dataset.surfaceAlt,
+
+        text: card.dataset.text,
+        mutedText: card.dataset.mutedText,
+
+        accent: card.dataset.accent,
+        accentHover: card.dataset.accentHover,
+        accentActive: card.dataset.accentActive,
+
+        border: card.dataset.border,
+        borderHover: card.dataset.borderHover,
+        borderFocus: card.dataset.borderFocus,
+
+        focusRing: card.dataset.focusRing,
+        textOnAccent: card.dataset.textOnAccent,
+
+        buttonSecondaryBg: card.dataset.buttonSecondaryBg,
+        buttonSecondaryHoverBg: card.dataset.buttonSecondaryHoverBg,
+        buttonSecondaryText: card.dataset.buttonSecondaryText,
+
+        inputBg: card.dataset.inputBg,
+        inputPlaceholder: card.dataset.inputPlaceholder,
+
+        disabledBg: card.dataset.disabledBg,
+        disabledText: card.dataset.disabledText
+    };
+
+    // Preview only
+    applyTheme(selectedTheme);
 };
+
+document.getElementById('btn-resetTheme').addEventListener('click', () => {
+
+    applyTheme(originalTheme);
+    
+    selectedTheme = null;
+    Toast.show('Theme reseted')
+});
+
+async function saveTheme() {
+
+    if (!selectedTheme)
+        return;
+
+    try {
+
+        await fetch('/Settings/ChangeTheme', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                themeName: selectedTheme.name
+            })
+        });
+
+        // New saved state becomes original
+        originalTheme = { ...selectedTheme };
+        Toast.show('Theme saved')
+
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+document.getElementById('btn-saveTheme').addEventListener('click', saveTheme);

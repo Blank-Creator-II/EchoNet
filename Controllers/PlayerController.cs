@@ -8,11 +8,13 @@ namespace EchoNet.Controllers;
 public class PlayerController : Controller
 {
     private readonly IAudioService _audio;
+    private readonly ILibScannerService _libScannerService;
     private readonly ILogger<PlayerController> _logger;
 
-    public PlayerController(IAudioService audio, IThemeService theme, ILogger<PlayerController> logger)
+    public PlayerController(IAudioService audio, ILibScannerService libScanner, ILogger<PlayerController> logger)
     {
         _audio = audio;
+        _libScannerService = libScanner;
         _logger = logger;
     }
 
@@ -74,5 +76,35 @@ public class PlayerController : Controller
     {
         _audio.SetVolume(request.Volume);
         return Ok();
+    }
+
+    [HttpPost("Player/FolderPicker")]
+    public async Task<IActionResult> FolderPicker([FromBody] List<string> paths, CancellationToken cancellationToken)
+    {
+        if (paths == null || paths.Count == 0)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "No folders selected."
+            });
+        }
+
+        var success = await _libScannerService.RunFirstTimeSetupAsync(paths, cancellationToken);
+
+        if (!success)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Library setup failed."
+            });
+        }
+
+        return Ok(new
+        {
+            success = true,
+            message = "Library scan completed."
+        });
     }
 }

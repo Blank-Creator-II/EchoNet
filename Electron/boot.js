@@ -26,13 +26,16 @@ function startBackend() {
 }
 
 async function createWindow() {
+
+    const theme = loadTheme();
+
     mainWindow = new BrowserWindow({
         title: "EchoNet",
         width: 1200,
         height: 800,
         show: false,
         autoHideMenuBar: true,
-        backgroundColor: '#1c1d1e', // avoids white flash
+        backgroundColor: theme.background, // avoids color flash
         webPreferences: {
             preload: path.join(__dirname, 'bridge.js'),
         }
@@ -57,6 +60,9 @@ async function createWindow() {
 
     // Load startup screen immediately
     await mainWindow.loadFile(path.join(__dirname, 'startup.html'));
+
+    await applyTheme(theme);
+
     mainWindow.show();
 
     // Utility sleep helper
@@ -155,6 +161,7 @@ async function createWindow() {
     `);
 
     // mainWindow.webContents.openDevTools({ mode: 'detach' });
+    mainWindow.webContents.session.clearCache();
 }
 
 app.whenReady().then(async () => {
@@ -216,3 +223,94 @@ ipcMain.handle('pick-folders', async () => {
 
     return result.filePaths;
 });
+
+// Theme loader
+const fs = require('fs');
+
+const settingsPath = path.join(
+    __dirname,
+    '..',
+    'wwwroot',
+    'data',
+    'settings.json'
+);
+
+const themesDir = path.join(
+    __dirname,
+    '..',
+    'wwwroot',
+    'theme'
+);
+
+// Default fallback
+const defaultThemeName = 'Crimson Shadow';
+
+function loadThemeName() {
+    try {
+        if (!fs.existsSync(settingsPath)) {
+            return defaultThemeName;
+        }
+
+        const settings = JSON.parse(
+            fs.readFileSync(settingsPath, 'utf8')
+        );
+
+        return settings.Theme ?? defaultThemeName;
+    }
+    catch {
+        return defaultThemeName;
+    }
+}
+
+function loadTheme() {
+    try {
+        const themeName = loadThemeName();
+
+        const themePath = path.join(
+            themesDir,
+            `${themeName}.json`
+        );
+
+        if (!fs.existsSync(themePath)) {
+            throw new Error(`Theme not found: ${themeName}`);
+        }
+
+        return JSON.parse(
+            fs.readFileSync(themePath, 'utf8')
+        );
+    }
+    catch (err) {
+        console.error('Failed to load theme:', err);
+
+        // Hard fallback
+        return {
+            name: 'Fallback',
+            background: '#151515',
+            surface: '#1e1e1e',
+            text: '#e0e0e0',
+            accent: '#dc143c'
+        };
+    }
+}
+
+async function applyTheme(theme) {
+    await mainWindow.webContents.executeJavaScript(`
+        (() => {
+            const theme = ${JSON.stringify(theme)};
+            const root = document.documentElement;
+
+            root.style.setProperty('--ls-bg', theme.background);
+            root.style.setProperty('--ls-surface', theme.surface);
+            root.style.setProperty('--ls-scanline', theme.surfaceAlt);
+
+            root.style.setProperty('--ls-text', theme.text);
+            root.style.setProperty('--ls-text-muted', theme.mutedText);
+
+            root.style.setProperty('--ls-accent', theme.accent);
+            root.style.setProperty('--ls-accent-dim', theme.accentHover);
+            root.style.setProperty('--ls-accent-glow', theme.accentActive);
+
+            root.style.setProperty('--ls-border', theme.border);
+        })();
+    `);
+}

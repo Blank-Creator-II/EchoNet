@@ -1,7 +1,10 @@
 ﻿<!DOCTYPE html>
 
 @inject EchoNet.Services.IThemeService ThemeService
+@inject EchoNet.Utils.SettingsJsonReader SettingsJsonReader
 @{
+    var appSettings = await SettingsJsonReader.LoadAsync();
+    ThemeService.SetTheme(appSettings.Theme);
     Theme theme = ThemeService.GetTheme();
 }
 
@@ -49,6 +52,7 @@
     <link rel="stylesheet" href="~/css/toast.css" />
 </head>
 <body>
+    <script src="~/js/toast.js"></script>
     <div class="app-layout">
 
         <!-- SIDEBAR -->
@@ -64,8 +68,10 @@
 
     </div>
 
-    <script src="~/js/site.js"></script>
+    <!-- GLOBAL MODAL HOST -->
+    <div id="modalHost"></div>
+
     <script src="~/js/playerbar.js"></script>
-    <script src="~/js/toast.js"></script>
+    <script type="module" src="~/js/site.js"></script>
 </body>
 </html>

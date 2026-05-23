@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="~/css/folderPicker.css"/>
+
+<div class="folder-picker-overlay" id="folderPickerOverlay">
+
+    <div class="folder-picker-modal" id="folderPickerModal">
+
+        <div class="header">
+            <h1>Select Music Folders</h1>
+            <p>Add the folders you want to scan into your library.</p>
+        </div>
+
+        <div class="folder-list" id="folderList">
+            <div class="no-folder" id="noFolder">
+                No folders selected yet
+            </div>
+        </div>
+
+        <div class="footer">
+
+            <div class="folder-count">
+                <span id="folderCount">0</span> folders selected
+            </div>
+
+            <div class="actions">
+
+                <button class="btn-add" id="addBtn">
+                    Add Folder
+                </button>
+
+                <button class="btn-cancel" id="cancelBtn">
+                    Cancel
+                </button>
+
+                <button class="btn-scan" id="scanBtn" disabled>
+                    Scan Library
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

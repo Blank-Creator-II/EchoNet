@@ -17,5 +17,11 @@ public class HomeController : Controller
     public IActionResult Index()
     {
         return View("Index");
-    }   
+    }
+
+    [HttpGet("Home/FolderPicker")]
+    public IActionResult FolderPicker()
+    {
+        return PartialView("_FolderPicker");
+    }
 }

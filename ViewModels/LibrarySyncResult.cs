@@ -1,4 +1,4 @@
-namespace EchoNet.Services;
+namespace EchoNet.ViewModels;
 
 public sealed record LibrarySyncResult(
     int FoldersScanned,

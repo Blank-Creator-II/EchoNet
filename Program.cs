@@ -1,5 +1,6 @@
 using EchoNet.Services;
 using EchoNet.Data;
+using EchoNet.Utils;
 using LibVLCSharp.Shared;
 using System.Runtime.InteropServices;
 using Microsoft.EntityFrameworkCore;
@@ -22,9 +23,13 @@ builder.WebHost.UseUrls("http://127.0.0.1:9292");
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-// Add singleton
+// Add singleton service
 builder.Services.AddSingleton<IAudioService, VlcAudioService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
+builder.Services.AddSingleton<SettingsJsonReader>();
+// Add scoped service
+builder.Services.AddScoped<ILibScannerService, LibScannerService>();
+builder.Services.AddScoped<ISongService, SongService>();
 // Add database
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));

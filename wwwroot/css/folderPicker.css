@@ -1,0 +1,271 @@
+.folder-picker-overlay {
+    position: fixed;
+    inset: 0;
+    background:
+        color-mix(in srgb, color-mix(in srgb, var(--bg) 65%, black) 65%, transparent);
+    
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: overlayFade .18s ease;
+}
+
+.folder-picker-modal {
+    width: 700px;
+    max-width: 92%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow:0 0 10px color-mix(in srgb, var(--accent) 30%, transparent);
+    animation: modalEnter .2s ease;
+}
+
+@keyframes folderRowEnter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes folderRowRemove {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(.96);
+    }
+}
+
+@keyframes overlayFade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalEnter {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes overlayFadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes modalExit {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(14px) scale(.98);
+    }
+}
+
+.header {
+    padding: 26px;
+    border-bottom:
+        1px solid var(--border);
+}
+
+.header h1 {
+    color: var(--text);
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.header p {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.folder-list {
+    padding: 22px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.no-folder {
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    border: 2px dashed var(--border);
+    border-radius: 18px;
+    background:
+        color-mix(in srgb, var(--surface-2) 55%, transparent);
+    font-size: 15px;
+}
+
+.folder-row {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition:
+        background .18s ease,
+        border-color .18s ease,
+        transform .18s ease;
+    animation: folderRowEnter .18s ease;
+}
+
+.remove-folder-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    flex-shrink: 0;
+    cursor: pointer;
+    background: transparent;
+    fill: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0px;
+    transition:
+        background .18s ease,
+        color .18s ease,
+        transform .18s ease;
+}
+
+.remove-folder-btn:hover {
+    background:
+        color-mix(in srgb, var(--accent) 18%, transparent);
+    fill: var(--accent);
+    transform: scale(1.05);
+}
+
+.folder-row.removing {
+    animation: folderRowRemove .18s ease forwards;
+}
+
+.folder-path {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    word-break: break-all;
+}
+
+.folder-picker-overlay.closing {
+    animation: overlayFadeOut .18s ease forwards;
+}
+
+.folder-picker-modal.closing {
+    animation: modalExit .18s ease forwards;
+}
+
+.footer {
+    padding: 20px 26px;
+    border-top:
+        1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.folder-count {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+}
+
+.actions button {
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background .18s ease,
+        color .18s ease,
+        border-color .18s ease,
+        transform .18s ease,
+        box-shadow .18s ease;
+}
+
+.btn-add {
+    border: none;
+    background: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+}
+
+.btn-add:hover {
+    background:
+        var(--button-secondary-hover-bg);
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.btn-cancel:hover {
+    background:
+        color-mix(in srgb, var(--surface-2) 80%, transparent);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-scan {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.btn-scan:hover {
+    background: var(--accent-hover);
+}
+
+.btn-scan:active {
+    background: var(--accent-active);
+}
+
+.btn-scan:disabled {
+    background: var(--disabled-bg);
+    color: var(--disabled-text);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}

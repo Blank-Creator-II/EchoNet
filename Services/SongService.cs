@@ -1,5 +1,6 @@
 using EchoNet.Data;
 using EchoNet.Models;
+using EchoNet.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace EchoNet.Services;

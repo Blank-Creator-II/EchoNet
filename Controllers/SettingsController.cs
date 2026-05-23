@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using EchoNet.Services;
+using EchoNet.Utils;
 using EchoNet.Models;
-using EchoNet.ViewModels;
+using System.Threading.Tasks;
 
 namespace EchoNet.Controllers;
 
@@ -9,11 +10,13 @@ public class SettingsController : Controller
 {
     private readonly ILogger<SettingsController> _logger;
     private readonly IThemeService _theme;
+    private readonly SettingsJsonReader _settingsReader;
 
-    public SettingsController(ILogger<SettingsController> logger, IThemeService theme)
+    public SettingsController(ILogger<SettingsController> logger, IThemeService theme, SettingsJsonReader settingsReader)
     {
         _logger = logger;
         _theme = theme;
+        _settingsReader = settingsReader;
     }
 
     public IActionResult Index()
@@ -22,9 +25,11 @@ public class SettingsController : Controller
     }
 
     [HttpPost("Settings/ChangeTheme")]
-    public IActionResult ChangeTheme(string themeName)
+    public async Task<IActionResult> ChangeTheme(string themeName)
     {
         _theme.SetTheme(themeName);
+        await _settingsReader.SaveAsync(new AppSettings{Theme = themeName});
+
         return Ok();
     }
 }
