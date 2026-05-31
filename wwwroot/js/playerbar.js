@@ -1,8 +1,11 @@
 let totalDuration = 0;
 let currentProgress = 0;
 let isDragging = false;
+let isVolumeDragging = false;
+let pollingTimeout = null;
+let isPollingActive = false;
 
-const progressTrack = document.getElementById('progressTrack');
+const progressSong = document.getElementById('progressSong');
 const progressFill = document.getElementById('progressFill');
 const progressThumb = document.getElementById('progressThumb');
 const currentTimeEl = document.getElementById('currentTime');
@@ -43,56 +46,75 @@ function setProgress(fraction) {
         formatTime(totalDuration);
 }
 
-setInterval(async () => {
-
-    if (isDragging)
+// Optimized Core Polling Logic using safe recursive setTimeout
+async function fetchPlayerStatus() {
+    // If polling was explicitly stopped or user is dragging, do not schedule next jump
+    if (!isPollingActive) return;
+    if (isDragging) {
+        // Check back in 250ms without hitting the network
+        pollingTimeout = setTimeout(fetchPlayerStatus, 250);
         return;
+    }
 
     try {
+        const response = await fetch('/Player/Status');
+        if (!response.ok) throw new Error('Status fetch failed');
+        const data = await response.json();
 
-        const response =
-            await fetch('/Player/Status');
+        window.__playerStatus = data;
 
-        const data =
-            await response.json();
+        window.dispatchEvent(
+            new CustomEvent('playerStatusUpdated', { detail: data })
+        );
 
-        totalDuration =
-            data.duration > 0
-                ? data.duration
-                : 0;
-
-        const currentTime =
-            data.currentTime > 0
-                ? data.currentTime
-                : 0;
-
-        const fraction =
-            totalDuration > 0
-                ? currentTime / totalDuration
-                : 0;
+        totalDuration = data.duration > 0 ? data.duration : 0;
+        const currentTime = data.currentTime > 0 ? data.currentTime : 0;
+        const fraction = totalDuration > 0 ? currentTime / totalDuration : 0;
 
         setProgress(fraction);
 
-        if (!isVolumeDragging) {
-            updateMuteBtnUIFromVolume(data.volume);
-        }
-
+        /* no need to poll for volume since it can't change without envoking setVolumeUI
         if (!isVolumeDragging && data.volume !== undefined) {
             setVolumeUI(data.volume);
-            updateMuteBtnUIFromVolume(data.volume);
         }
+        */
 
     } catch (err) {
-
-        console.error(err);
+        console.error("Polling error:", err);
+    } finally {
+        // Only schedule the next poll after the current network request finishes
+        if (isPollingActive) {
+            pollingTimeout = setTimeout(fetchPlayerStatus, 250);
+        }
     }
+}
 
-}, 250);
+// Polling Controllers
+function startPolling() {
+    if (isPollingActive) return; 
+    isPollingActive = true;
+    
+    // Execute immediately, subsequent calls chain recursively through setTimeout
+    fetchPlayerStatus(); 
+    console.log("Started Polling");
+}
+
+function stopPolling() {
+    isPollingActive = false;
+    if (pollingTimeout) {
+        clearTimeout(pollingTimeout);
+        pollingTimeout = null;
+    }
+    console.log("Stopped Polling");
+}
+
+window.addEventListener('startPlayerPolling', startPolling);
+window.addEventListener('stopPlayerPolling', stopPolling);
 
 function getProgressFraction(event) {
 
     const rect =
-        progressTrack.getBoundingClientRect();
+        progressSong.getBoundingClientRect();
 
     const clientX =
         event.touches
@@ -107,60 +129,48 @@ function getProgressFraction(event) {
 }
 
 function onProgressStart(event) {
+    if(!window.__playerStatus.isSeekable)
+    {
+        return;
+    }
 
     event.preventDefault();
-
     isDragging = true;
-
-    const fraction =
-        getProgressFraction(event);
-
-    setProgress(fraction);
+    setProgress(getProgressFraction(event));
 
     function onMove(e) {
-
         e.preventDefault();
-
-        setProgress(
-            getProgressFraction(e));
+        setProgress(getProgressFraction(e));
     }
 
     async function onEnd(e) {
-
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('touchmove', onMove);
-
         document.removeEventListener('mouseup', onEnd);
         document.removeEventListener('touchend', onEnd);
 
-        isDragging = false;
+        const finalFraction = getProgressFraction(e);
+        const seekSeconds = finalFraction * totalDuration;
 
-        const seekSeconds =
-            getProgressFraction(e) * totalDuration;
+        // Set UI matching user's drop spot instantly
+        setProgress(finalFraction);
 
+        // Send to server
         await sendSeekPosition(seekSeconds);
-        setProgress(getProgressFraction(e), true);
+        
+        // Allow polling to resume safely AFTER the server processing is done
+        isDragging = false; 
     }
 
     document.addEventListener('mousemove', onMove);
-
-    document.addEventListener(
-        'touchmove',
-        onMove,
-        { passive: false });
-
+    document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onEnd);
-
     document.addEventListener('touchend', onEnd);
 }
 
-progressTrack.addEventListener('mousedown', onProgressStart);
+progressSong.addEventListener('mousedown', onProgressStart);
 
-progressTrack.addEventListener(
-    'touchstart',
-    onProgressStart,
-    { passive: false }
-);
+progressSong.addEventListener('touchstart', onProgressStart,{ passive: false });
 
 async function sendSeekPosition(seconds) {
 
@@ -190,11 +200,10 @@ async function sendSeekPosition(seconds) {
 }
 
 
-const volumeTrack = document.getElementById('volumeTrack');
+const volumeSong = document.getElementById('volumeSong');
 const volumeFill = document.getElementById('volumeFill');
 
 let volume = 100;
-let isVolumeDragging = false;
 
 function setVolumeUI(value) {
 
@@ -207,7 +216,7 @@ function setVolumeUI(value) {
 
 function getVolumeFraction(event) {
 
-    const rect = volumeTrack.getBoundingClientRect();
+    const rect = volumeSong.getBoundingClientRect();
 
     const clientX =
         event.touches
@@ -255,8 +264,8 @@ function onVolumeStart(event) {
     document.addEventListener('touchend', onEnd);
 }
 
-volumeTrack.addEventListener('mousedown', onVolumeStart);
-volumeTrack.addEventListener('touchstart', onVolumeStart, { passive: false });
+volumeSong.addEventListener('mousedown', onVolumeStart);
+volumeSong.addEventListener('touchstart', onVolumeStart, { passive: false });
 
 async function sendVolume(value) {
 
@@ -320,7 +329,8 @@ document.getElementById('playPauseBtn').addEventListener('click', async () => {
 
         const data = await response.json();
 
-        await updatePlayBtnUI(data);
+        if (data.isSeekable)
+            updatePlayBtnUI(data);
 
     } catch (err) {
         console.error(err);
@@ -330,10 +340,15 @@ document.getElementById('playPauseBtn').addEventListener('click', async () => {
 async function updatePlayBtnUI(data) {
     const playBtn = document.getElementById('playPauseBtn');
 
-    if (playBtn) {
-        playBtn.innerHTML = data.isPlaying
-            ? pauseIconSVG()
-            : playIconSVG();
+    if (playBtn) { playBtn.innerHTML = data.isPlaying ? pauseIconSVG() : playIconSVG(); }
+
+    if (data.isPlaying)
+    {
+        window.dispatchEvent(new CustomEvent('startPlayerPolling'));
+    }
+    else
+    {
+        window.dispatchEvent(new CustomEvent('stopPlayerPolling'));
     }
 }
 
@@ -351,15 +366,90 @@ function updateMuteBtnUIFromVolume(vol) {
     if (!muteBtn) return;
 
     const shouldBeMuted = vol === 0;
-
-    const currentIsMuted =
-        muteBtn.dataset.muted === "1";
+    const currentIsMuted = muteBtn.dataset.muted === "1";
 
     if (currentIsMuted === shouldBeMuted) return;
 
     muteBtn.dataset.muted = shouldBeMuted ? "1" : "0";
-
-    muteBtn.innerHTML = shouldBeMuted
-        ? mutedIconSVG()
-        : unmutedIconSVG();
+    muteBtn.innerHTML = shouldBeMuted ? mutedIconSVG() : unmutedIconSVG();
 }
+
+async function updatePlayerBar(song) {
+
+    const titleEl = document.querySelector('.song-title');
+    const artistEl = document.querySelector('.song-artist');
+    const coverArtContainer = document.getElementById('playerSongThumb');
+
+    if (titleEl) {
+        titleEl.textContent = song.title;
+    }
+
+    if (artistEl) {
+        artistEl.textContent =
+            song.artist || 'Unknown Artist';
+    }
+
+    if (coverArtContainer) {
+        // If cover art exists and isn't just an empty string/null
+        if (song.coverArtDataUri && song.coverArtDataUri.trim() !== "") {
+            coverArtContainer.innerHTML = `
+                <img class="song-thumb" src="${song.coverArtDataUri}" alt="" loading="lazy" 
+                     onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div class=\'playbar-artwork-placeholder\'>♪</div>')">
+            `;
+        } else {
+            // Fallback placeholder directly if no string data is returned
+            coverArtContainer.innerHTML = '<div class="playbar-artwork-placeholder">♪</div>';
+        }
+    }
+
+    window.dispatchEvent(new CustomEvent('startPlayerPolling'));
+    await savePlayerState(song);
+}
+
+async function savePlayerState(song) {
+    try {
+
+        const response = await fetch('/Player/SaveState', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(song)
+        });
+
+        if (!response.ok) {
+            console.error('PlayerState saving failed');
+            return;
+        }
+
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Instantly check the server status the moment the new page mounts
+        const response = await fetch('/Player/Status');
+        if (!response.ok) throw new Error('Initial status check failed');
+        const data = await response.json();
+
+        // Cache the data globally 
+        window.__playerStatus = data;
+
+        // Immediately sync the visual states so the UI doesn't flicker
+        totalDuration = data.duration > 0 ? data.duration : 0;
+        const currentTime = data.currentTime > 0 ? data.currentTime : 0;
+        const fraction = totalDuration > 0 ? currentTime / totalDuration : 0;
+        
+        setProgress(fraction);
+
+        // trigger the polling if the media engine is actively running
+        if (data.isPlaying) {
+            startPolling(); // Call the function directly to avoid event execution race conditions with event dispach
+        }
+
+    } catch (err) {
+        console.error("Failed to auto-heal player session on page load:", err);
+    }
+});

@@ -1,10 +1,10 @@
 ﻿<!DOCTYPE html>
 
 @inject EchoNet.Services.IThemeService ThemeService
-@inject EchoNet.Utils.SettingsJsonReader SettingsJsonReader
+@inject EchoNet.Utils.AppDataJsonReader AppDataJsonReader
 @{
-    var appSettings = await SettingsJsonReader.LoadAsync();
-    ThemeService.SetTheme(appSettings.Theme);
+    AppData? appData = AppDataJsonReader.Current;
+    ThemeService.SetTheme(appData.Theme);
     Theme theme = ThemeService.GetTheme();
 }
 

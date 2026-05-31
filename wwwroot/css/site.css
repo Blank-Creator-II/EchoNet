@@ -216,9 +216,10 @@ a, a:visited, a:hover, a:active {
 
 .player-bar {
     grid-area: player;
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 280px 600px 280px;
     justify-content: space-between;
+    align-items: center;
     gap: 20px;
     padding: 0 20px;
     background: var(--surface);
@@ -228,18 +229,19 @@ a, a:visited, a:hover, a:active {
     box-shadow: 0 -2px 15px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
-/* TRACK INFO */
+/* SONG INFO */
 
-.player-track-info {
+.player-song-info {
     display: flex;
     align-items: center;
     gap: 14px;
-    min-width: 200px;
-    max-width: 280px;
+    width: 100%;
+    min-width: 0;
     flex-shrink: 0;
 }
 
-.track-thumb {
+.song-thumb-container,
+.song-thumb {
     width: 75px;
     height: 75px;
     border-radius: 6px;
@@ -251,14 +253,23 @@ a, a:visited, a:hover, a:active {
     flex-shrink: 0;
 }
 
-.track-details {
+.playbar-artwork-placeholder {
+    width: 100%; height: 100%;
+    border-radius: 7px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+    font-size: 3rem;
+}
+
+.song-details {
     display: flex;
     flex-direction: column;
     gap: 3px;
     min-width: 0;
 }
 
-.track-title {
+.song-title {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text);
@@ -267,7 +278,7 @@ a, a:visited, a:hover, a:active {
     text-overflow: ellipsis;
 }
 
-.track-artist {
+.song-artist {
     font-size: 0.78rem;
     color: var(--muted);
     white-space: nowrap;
@@ -275,7 +286,7 @@ a, a:visited, a:hover, a:active {
     text-overflow: ellipsis;
 }
 
-.track-like-btn {
+.song-like-btn {
     background: none;
     border: none;
     color: var(--muted);
@@ -287,15 +298,15 @@ a, a:visited, a:hover, a:active {
         transform 0.15s ease;
 }
 
-.track-like-btn:hover {
+.song-like-btn:hover {
     color: var(--text);
 }
 
-.track-like-btn.liked {
+.song-like-btn.liked {
     color: var(--accent);
 }
 
-.track-like-btn:focus-visible {
+.song-like-btn:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--focus-ring);
     border-radius: 4px;
@@ -307,10 +318,11 @@ a, a:visited, a:hover, a:active {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     flex: 1;
-    max-width: 600px;
-    min-width: 300px;
+    width: 100%;
+    min-width: 0;
 }
 
 .player-controls {
@@ -396,7 +408,7 @@ a, a:visited, a:hover, a:active {
     font-family: Consolas, monospace;
 }
 
-.progress-bar-track {
+.progress-bar-song {
     position: relative;
     flex: 1;
     height: 4px;
@@ -406,7 +418,7 @@ a, a:visited, a:hover, a:active {
     transition: height 0.15s ease;
 }
 
-.progress-bar-track:hover {
+.progress-bar-song:hover {
     height: 6px;
 }
 
@@ -426,7 +438,7 @@ a, a:visited, a:hover, a:active {
     transition: left 120ms linear;
 }
 
-.progress-bar-track:hover .progress-bar-fill {
+.progress-bar-song:hover .progress-bar-fill {
     background: var(--accent-hover);
 }
 
@@ -443,12 +455,12 @@ a, a:visited, a:hover, a:active {
     transition: opacity 0.15s ease;
 }
 
-.progress-bar-track:hover .progress-bar-thumb {
+.progress-bar-song:hover .progress-bar-thumb {
     opacity: 1;
 }
 
 /* Focus ring for keyboard use */
-.progress-bar-track:focus-visible {
+.progress-bar-song:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px var(--focus-ring);
 }
@@ -459,7 +471,7 @@ a, a:visited, a:hover, a:active {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-width: 140px;
+    width: 100%;
     justify-content: flex-end;
     flex-shrink: 0;
 }
@@ -498,7 +510,7 @@ a, a:visited, a:hover, a:active {
     transition: width 180ms ease-out;
 }
 
-.volume-slider-track {
+.volume-slider-song {
     position: relative;
     width: 90px;
     height: 4px;
@@ -508,7 +520,7 @@ a, a:visited, a:hover, a:active {
     transition: height 0.15s ease;
 }
 
-.volume-slider-track:hover {
+.volume-slider-song:hover {
     height: 6px;
 }
 
@@ -520,7 +532,7 @@ a, a:visited, a:hover, a:active {
     background: var(--accent);
 }
 
-.volume-slider-track:hover .volume-slider-fill {
+.volume-slider-song:hover .volume-slider-fill {
     background: var(--accent-hover);
 }
 
@@ -537,11 +549,11 @@ a, a:visited, a:hover, a:active {
     opacity: 0;
 }
 
-.volume-slider-track:hover .volume-slider-fill::after {
+.volume-slider-song:hover .volume-slider-fill::after {
     opacity: 1;
 }
 
-.volume-slider-track:focus-visible {
+.volume-slider-song:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px var(--focus-ring);
 }
@@ -562,7 +574,7 @@ a, a:visited, a:hover, a:active {
     width: 6px;
 }
 
-::-webkit-scrollbar-track {
+::-webkit-scrollbar-song {
     background: transparent;
 }
 
@@ -629,12 +641,12 @@ a, a:visited, a:hover, a:active {
         min-height: auto;
     }
 
-    .player-track-info {
+    .player-song-info {
         max-width: 160px;
         min-width: auto;
     }
 
-    .track-thumb {
+    .song-thumb {
         width: 40px;
         height: 40px;
         font-size: 18px;
@@ -648,7 +660,7 @@ a, a:visited, a:hover, a:active {
         min-width: auto;
     }
 
-    .volume-slider-track {
+    .volume-slider-song {
         width: 60px;
     }
 }

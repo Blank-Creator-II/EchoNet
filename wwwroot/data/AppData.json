@@ -1,0 +1,22 @@
+{
+  "Theme": "Frosty Abyss",
+  "songMetadata": {
+    "Id": "00000000-0000-0000-0000-000000000000",
+    "FilePath": "",
+    "FileName": "",
+    "Title": "",
+    "Artist": null,
+    "Album": null,
+    "Genre": null,
+    "FileSize": 0,
+    "LastModifiedUtc": "0001-01-01T00:00:00",
+    "Duration": "00:00:00",
+    "FormattedDuration": null,
+    "CreatedAt": null,
+    "CoverArtBytes": null,
+    "CoverArtContentType": null,
+    "CoverArtDataUri": null
+  },
+  "Position": "00:00:00",
+  "Volume": 100
+}

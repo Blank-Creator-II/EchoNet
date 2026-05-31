@@ -91,20 +91,20 @@
     }
 }
 
-.header {
+.f-header {
     padding: 26px;
     border-bottom:
         1px solid var(--border);
 }
 
-.header h1 {
+.f-header h1 {
     color: var(--text);
     font-size: 24px;
     font-weight: 700;
     margin-bottom: 8px;
 }
 
-.header p {
+.f-header p {
     color: var(--muted);
     font-size: 14px;
 }

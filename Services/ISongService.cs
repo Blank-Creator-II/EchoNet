@@ -11,6 +11,7 @@ public interface ISongService
     Task<List<Song>> SearchByTitleAsync(string text);
     Task<List<Song>> SearchByGenreAsync(string genre);
     Task<List<Song>> SearchByArtistAsync(string artist);
+    Task<Song?> GetSongByPathAsync(string path);
     Task<List<Song>> GeneralSearchAsync(string term);
     Task<bool> DeleteSongAsync(Guid id);
 

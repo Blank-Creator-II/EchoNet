@@ -86,6 +86,12 @@ public class SongService : ISongService
             .ToListAsync();
     }
 
+    public async Task<Song?> GetSongByPathAsync(string path)
+    {
+        return await _db.Songs
+            .FirstOrDefaultAsync(s => s.FilePath == path);
+    }
+
     public async Task<List<Song>> GeneralSearchAsync(string term)
     {
         _logger.LogDebug("Performing general song search with term: {Term}", term);

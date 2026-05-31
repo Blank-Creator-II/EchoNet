@@ -17,6 +17,7 @@ public class ThemeService : IThemeService
 
     public void SetTheme(string themeName)
     {
+        if (_currentTheme == themeName) {return;}
         _logger.LogInformation($"Theme Set to {themeName}");
         _currentTheme = themeName;
     }

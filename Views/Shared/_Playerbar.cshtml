@@ -1,5 +1,8 @@
 @inject EchoNet.Services.IAudioService AudioService
+@inject EchoNet.Utils.AppDataJsonReader AppDataJsonReader
 @{
+    AppData? appData = AppDataJsonReader.Current;
+
     var progress_fraction =
         AudioService.Duration.TotalSeconds > 0
             ? AudioService.CurrentTime.TotalSeconds / AudioService.Duration.TotalSeconds
@@ -9,13 +12,15 @@
 <footer class="player-bar">
 
     <!-- LEFT -->
-    <div class="player-track-info">
+    <div class="player-song-info">
 
-        <div class="track-thumb">🎶</div>
+        <div class="song-thumb-container" id="playerSongThumb">
+            <img class="song-thumb" src="@appData.songMetadata.CoverArtDataUri" alt="" loading="lazy" />
+        </div>
 
-        <div class="track-details">
-            <span class="track-title">Blinding Lights test 12345678</span>
-            <span class="track-artist">The Weeknd</span>
+        <div class="song-details">
+            <span class="song-title">@appData.songMetadata.Title</span>
+            <span class="song-artist">@appData.songMetadata.Artist</span>
         </div>
 
     </div>
@@ -112,7 +117,7 @@
                 @(AudioService.CurrentTime.ToString(@"m\:ss"))
             </span>
 
-            <div class="progress-bar-track" id="progressTrack">
+            <div class="progress-bar-song" id="progressSong">
 
                 <div class="progress-bar-fill"
                     id="progressFill"
@@ -164,7 +169,7 @@
             </svg>
         </button>
 
-        <div class="volume-slider-track" id="volumeTrack">
+        <div class="volume-slider-song" id="volumeSong">
 
             <div class="volume-slider-fill"
                 id="volumeFill"

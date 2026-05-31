@@ -9,14 +9,14 @@ namespace EchoNet.Controllers;
 public class SettingsController : Controller
 {
     private readonly ILogger<SettingsController> _logger;
-    private readonly IThemeService _theme;
-    private readonly SettingsJsonReader _settingsReader;
+    private readonly IThemeService _themeService;
+    private readonly AppDataJsonReader _appDataReader;
 
-    public SettingsController(ILogger<SettingsController> logger, IThemeService theme, SettingsJsonReader settingsReader)
+    public SettingsController(ILogger<SettingsController> logger, IThemeService themeService, AppDataJsonReader appDataReader)
     {
         _logger = logger;
-        _theme = theme;
-        _settingsReader = settingsReader;
+        _themeService = themeService;
+        _appDataReader = appDataReader;
     }
 
     public IActionResult Index()
@@ -25,11 +25,10 @@ public class SettingsController : Controller
     }
 
     [HttpPost("Settings/ChangeTheme")]
-    public async Task<IActionResult> ChangeTheme(string themeName)
+    public IActionResult ChangeTheme(string themeName)
     {
-        _theme.SetTheme(themeName);
-        await _settingsReader.SaveAsync(new AppSettings{Theme = themeName});
-
+        _themeService.SetTheme(themeName);
+        _appDataReader.UpdateInMemory();
         return Ok();
     }
 }

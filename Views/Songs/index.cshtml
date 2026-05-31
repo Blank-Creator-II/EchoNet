@@ -1,1 +1,97 @@
-<h1>Songs</h1>
+@model List<EchoNet.ViewModels.SongMetadata>
+@using System.Text.Json
+
+<link rel="stylesheet" href="~/css/songs/_songs.css" asp-append-version="true"/>
+
+<div class="songs-page">
+    <!-- FIXED HEADER -->
+    <div class="header" id="header">
+        <div class="header-nav">
+            <div class="header-left">
+                <h1 class="header-title">Songs</h1>
+                <span class="song-count" id="songCountDisplay">@Model.Count songs</span>
+            </div>
+            <div class="header-right">
+                <span class="sort-label">Sort</span>
+                <div class="sort-group" id="sortGroup">
+                    <button class="sort-btn active" data-sort="newest">Newest</button>
+                    <button class="sort-btn" data-sort="oldest">Oldest</button>
+                    <button class="sort-btn" data-sort="az">A – Z</button>
+                    <button class="sort-btn" data-sort="za">Z – A</button>
+                </div>
+                <div class="header-extra">
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active-view" title="List view">☰</button>
+                        <button class="view-toggle-btn" title="Grid view">⊞</button>
+                    </div>
+                    <button class="add-btn" id="pickMusicBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="column-headers">
+            <div class="col-index">#</div>
+            <div class="col-artwork"></div>
+            <div class="col-title">Title</div>
+            <div class="col-artist">Artist</div>
+            <div class="col-album">Album</div>
+            <div class="col-duration">Time</div>
+        </div>
+    </div>
+
+    <!-- SCROLLABLE SONG LIST -->
+    <div class="songs-table-container" id="tableContainer">
+        <table class="songs-table">
+            <colgroup>
+                <col class="col-index">
+                <col class="col-artwork">
+                <col class="col-title">
+                <col class="col-artist">
+                <col class="col-album">
+                <col class="col-duration">
+            </colgroup>
+            <tbody id="songsTbody"></tbody>
+        </table>
+        <div class="empty-state" id="emptyState">No songs found. Add some songs to your library!</div>
+    </div>
+</div>
+
+
+<script>
+    // Inject the song data directly from the model to ui builder
+    window.__songsInitialData = @Html.Raw(JsonSerializer.Serialize(Model));
+    // define a custom action when a song row is clicked
+    window.__songClickHandler = async function(_song) {
+
+        try {
+
+            const response = await fetch('/Player/Play', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(_song)
+            });
+
+            if (!response.ok) {
+                console.error('Play failed');
+                return;
+            }
+
+            const data = await response.json();
+
+            // update player bar immediately
+            await updatePlayerBar(data.song);
+
+            // update play button immediately
+            updatePlayBtnUI({isPlaying: data.isPlaying});
+
+        } catch (err) {
+            console.error(err);
+        }
+    };
+</script>
+<script src="~/js/songs/_songs.js" asp-append-version="true"></script>

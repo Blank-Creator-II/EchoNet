@@ -2,6 +2,86 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const treeKill = require('tree-kill');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+
+// --- Unified Logging System removed that ugly log ---
+
+const originalLog = console.log;
+const originalError = console.error;
+
+function getTimestamp() {
+    const now = new Date();
+    const pad = (num, size = 2) => String(num).padStart(size, '0');
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}:${pad(now.getMilliseconds(), 3)}`;
+}
+
+function formatLog(framework, defaultLevel, args) {
+    let message = args.map(arg => {
+        if (arg instanceof Error) return arg.stack || arg.message;
+        if (typeof arg === 'object') return JSON.stringify(arg);
+        return String(arg);
+    }).join(' ');
+
+    message = message.replace(/\x1b\[[0-9;]*m/g, '');
+
+    if (message.includes('[ ASP.NET EXIT]')) {
+        framework = ' ASP.NET';
+        defaultLevel = 'WAR';
+        message = message.replace(/^\[\ ASP.NET EXIT\]\s*/i, 'Process Exited: ');
+    }
+
+    // Clean out redundant framework prefixes from original string logs
+    message = message.replace(/^\[Electron\]:?\s*/i, '');
+    message = message.replace(/^\[\ ASP.NET\]:?\s*/i, '');
+
+    // Resolve structural log levels dynamically based on text keywords
+    let level = defaultLevel;
+    const upper = message.toUpperCase();
+    if (upper.includes('ERROR') || upper.includes('FAIL') || upper.includes('CRASHED')) {
+        level = 'ERR';
+    } else if (upper.includes('WARN') || upper.includes('WARNING')) {
+        level = 'WAR';
+    } else if (upper.includes('DEBUG') || upper.includes('DBUG')) {
+        level = 'DBG';
+    } else if (upper.includes('TRACE') || upper.includes('TRCE')) {
+        level = 'TRC';
+    } else if (upper.includes('STATUS: 200') || upper.includes('READY') || upper.includes('SUCCESS') || upper.includes('INFO')) {
+        level = 'INF';
+    }
+
+    // Clean out redundant  ASP.NET core log levels prefix (e.g., "info: ", "fail: ", "dbug: ")
+    message = message.replace(/^(info|warn|fail|dbug|crit|trce|error):\s*/i, '');
+
+    // Set matching colors based strictly on log levels
+    let levelColor = '\x1b[32m'; // Default: INF (Green)
+    if (level === 'ERR') levelColor = '\x1b[31m'; // Red
+    if (level === 'WAR') levelColor = '\x1b[33m'; // Yellow
+    if (level === 'DBG') levelColor = '\x1b[36m'; // Cyan
+    if (level === 'TRC') levelColor = '\x1b[90m'; // Gray
+
+    // Fixed Framework-specific Identifier Colors (Distinct from log levels)
+    // Electron = Orange (\x1b[38;5;208m) |  ASP.NET = Bright Magenta (\x1b[95m) 
+    const FW_COLOR = framework === 'Electron' ? '\x1b[38;5;208m' : '\x1b[95m';
+    const RESET = '\x1b[0m';
+
+    // Output target design: [Framework]-[Timestamp]-[Level]: Message
+    return `${FW_COLOR}[${framework}]${RESET}${levelColor}-[${getTimestamp()}]-[${level}]: ${message}${RESET}`;
+}
+
+// Global Electron Interceptors
+console.log = (...args) => originalLog(formatLog('Electron', 'INF', args));
+console.error = (...args) => originalError(formatLog('Electron', 'ERR', args));
+console.warn = (...args) => originalLog(formatLog('Electron', 'WAR', args));
+console.info = (...args) => originalLog(formatLog('Electron', 'INF', args));
+
+// Explicit ASP.NET Stream Printer
+function printDotnetLog(data, isError = false) {
+    const lines = data.toString().split('\n');
+    lines.forEach(line => {
+        if (!line.trim()) return;
+        originalLog(formatLog(' ASP.NET', isError ? 'ERR' : 'INF', [line]));
+    });
+}
 
 let mainWindow;
 let backendProcess;
@@ -13,20 +93,19 @@ function startBackend() {
     });
 
     backendProcess.stdout.on('data', (data) => {
-        console.log(`[.NET]: ${data}`);
+        printDotnetLog(data);
     });
 
     backendProcess.stderr.on('data', (data) => {
-        console.error(`[.NET ERROR]: ${data}`);
+        printDotnetLog(data, true);
     });
 
-	backendProcess.on('exit', (code, signal) => {
-	    console.log(`[.NET]: exited with code ${code}, signal ${signal}`);
-	});
+    backendProcess.on('exit', (code, signal) => {
+        console.log(`[ ASP.NET EXIT] code=${code} signal=${signal}`);
+    });
 }
 
 async function createWindow() {
-
     const theme = loadTheme();
 
     mainWindow = new BrowserWindow({
@@ -35,7 +114,7 @@ async function createWindow() {
         height: 800,
         show: false,
         autoHideMenuBar: true,
-        backgroundColor: theme.background, // avoids color flash
+        backgroundColor: theme.background, 
         webPreferences: {
             preload: path.join(__dirname, 'bridge.js'),
         }
@@ -43,46 +122,30 @@ async function createWindow() {
 
     mainWindow.webContents.on('before-input-event', (event, input) => {
         const key = input.key.toLowerCase();
-
-        // Ctrl+R / Cmd+R
-        const reloadShortcut =
-            key === 'r' && (input.control || input.meta);
-
-        // F5
+        const reloadShortcut = key === 'r' && (input.control || input.meta);
         const f5 = key === 'f5';
 
         if (reloadShortcut || f5) {
             event.preventDefault();
-
             console.log('[Electron]: Reload blocked during loading screen');
         }
     });
 
-    // Load startup screen immediately
     await mainWindow.loadFile(path.join(__dirname, 'startup.html'));
-
     await applyTheme(theme);
-
     mainWindow.show();
 
-    // Utility sleep helper
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Wait for backend readiness
     async function waitForServer() {
-
-        // Begin polling
         for (let i = 0; i < 60; i++) {
             try {
-                console.log(`[Electron]: Checking server... attempt ${i + 1}/60`); // 1 min check
-
+                console.log(`[Electron]: Checking server... attempt ${i + 1}/60`);
                 const res = await fetch('http://127.0.0.1:9292/ready');
-
                 console.log("[Electron]: STATUS:", res.status);
 
                 const text = await res.text();
                 const parsed = JSON.parse(text);
-
                 console.log("[Electron]: BODY:", parsed);
 
                 if (res.status === 200 && parsed === "READY") {
@@ -93,8 +156,6 @@ async function createWindow() {
             catch (err) {
                 console.log("[Electron]: Fetch error:", err.message);
             }
-
-            // 1sec between checks
             await sleep(1000);
         }
 
@@ -121,16 +182,13 @@ async function createWindow() {
         console.error('[Electron]: Renderer crashed');
     });
 
-    // Wait until backend is available
     const isUp = await waitForServer();
-
     if (!isUp) {
         console.error("[Electron]: Backend failed to start.");
         app.quit();
         return;
     }
 
-    // Trigger startup animation completion
     try {
         await mainWindow.webContents.executeJavaScript(`
             if (window.loadingComplete) {
@@ -143,24 +201,19 @@ async function createWindow() {
     }
 
     console.log("[Electron]: Loading UI");
-
-    // Load actual app
     await mainWindow.loadURL("http://127.0.0.1:9292");
 
     console.log('[Electron]: Reload unblocked');
-    // Re-enable reloads after startup screen is gone
     mainWindow.webContents.removeAllListeners('before-input-event');
 
     await mainWindow.webContents.executeJavaScript(`
         document.body.style.opacity = '0';
         document.body.style.transition = 'opacity 500ms ease';
-
         requestAnimationFrame(() => {
             document.body.style.opacity = '1';
         });
     `);
 
-    // mainWindow.webContents.openDevTools({ mode: 'detach' });
     mainWindow.webContents.session.clearCache();
 }
 
@@ -169,9 +222,7 @@ app.whenReady().then(async () => {
     await createWindow();
 });
 
-// Clean up when closing using treeKill for safty in cross platforms
 let isQuitting = false;
-
 app.on('before-quit', async (event) => {
     if (isQuitting) return;
 
@@ -180,18 +231,13 @@ app.on('before-quit', async (event) => {
 
     try {
         console.log("[Electron]: Sending shutdown request");
-
         const controller = new AbortController();
-
-        const timeout = setTimeout(() => {
-            controller.abort();
-        }, 5000);
+        const timeout = setTimeout(() => { controller.abort(); }, 5000);
 
         await fetch("http://127.0.0.1:9292/shutdown", {
             method: "POST",
             signal: controller.signal,
         });
-
         clearTimeout(timeout);
     }
     catch (err) {
@@ -201,9 +247,7 @@ app.on('before-quit', async (event) => {
         await dialog.showMessageBox({
             type: "error",
             title: "Shutdown Failed",
-            message:
-                "The backend server did not accept the shutdown signal.\n\n" +
-                "Electron will try to forcefully terminate the backend process.",
+            message: "The backend server did not accept the shutdown signal.\n\nElectron will try to forcefully terminate the backend process.",
             buttons: ["OK"],
         });
 
@@ -211,53 +255,26 @@ app.on('before-quit', async (event) => {
             treeKill(backendProcess.pid, "SIGKILL");
         }
     }
-
     app.quit();
 });
 
-// Folder picker
 ipcMain.handle('pick-folders', async () => {
     const result = await dialog.showOpenDialog({
         properties: ['openDirectory', 'multiSelections']
     });
-
     return result.filePaths;
 });
 
-// Theme loader
-const fs = require('fs');
-
-const settingsPath = path.join(
-    __dirname,
-    '..',
-    'wwwroot',
-    'data',
-    'settings.json'
-);
-
-const themesDir = path.join(
-    __dirname,
-    '..',
-    'wwwroot',
-    'theme'
-);
-
-// Default fallback
+const AppDataPath = path.join(__dirname, '..', 'wwwroot', 'data', 'AppData.json');
+const themesDir = path.join(__dirname, '..', 'wwwroot', 'theme');
 const defaultThemeName = 'Crimson Shadow';
 
 function loadThemeName() {
     try {
-        if (!fs.existsSync(settingsPath)) {
-            return defaultThemeName;
-        }
-
-        const settings = JSON.parse(
-            fs.readFileSync(settingsPath, 'utf8')
-        );
-
-        return settings.Theme ?? defaultThemeName;
-    }
-    catch {
+        if (!fs.existsSync(AppDataPath)) return defaultThemeName;
+        const AppData = JSON.parse(fs.readFileSync(AppDataPath, 'utf8'));
+        return AppData.Theme ?? defaultThemeName;
+    } catch {
         return defaultThemeName;
     }
 }
@@ -265,24 +282,11 @@ function loadThemeName() {
 function loadTheme() {
     try {
         const themeName = loadThemeName();
-
-        const themePath = path.join(
-            themesDir,
-            `${themeName}.json`
-        );
-
-        if (!fs.existsSync(themePath)) {
-            throw new Error(`Theme not found: ${themeName}`);
-        }
-
-        return JSON.parse(
-            fs.readFileSync(themePath, 'utf8')
-        );
-    }
-    catch (err) {
+        const themePath = path.join(themesDir, `${themeName}.json`);
+        if (!fs.existsSync(themePath)) throw new Error(`Theme not found: ${themeName}`);
+        return JSON.parse(fs.readFileSync(themePath, 'utf8'));
+    } catch (err) {
         console.error('Failed to load theme:', err);
-
-        // Hard fallback
         return {
             name: 'Fallback',
             background: '#151515',
@@ -298,18 +302,14 @@ async function applyTheme(theme) {
         (() => {
             const theme = ${JSON.stringify(theme)};
             const root = document.documentElement;
-
             root.style.setProperty('--ls-bg', theme.background);
             root.style.setProperty('--ls-surface', theme.surface);
             root.style.setProperty('--ls-scanline', theme.surfaceAlt);
-
             root.style.setProperty('--ls-text', theme.text);
             root.style.setProperty('--ls-text-muted', theme.mutedText);
-
             root.style.setProperty('--ls-accent', theme.accent);
             root.style.setProperty('--ls-accent-dim', theme.accentHover);
             root.style.setProperty('--ls-accent-glow', theme.accentActive);
-
             root.style.setProperty('--ls-border', theme.border);
         })();
     `);

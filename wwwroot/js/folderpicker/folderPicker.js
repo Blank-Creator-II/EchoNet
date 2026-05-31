@@ -126,6 +126,8 @@ export function initFolderPicker() {
             document.getElementById('modalHost').innerHTML = '';
 
         }, { once: true });
+
+        setTimeout(() => {location.reload();}, 500); // reload after 0.5 seconds
     }
 
     // click backdrop to close

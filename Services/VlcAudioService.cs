@@ -1,3 +1,4 @@
+using EchoNet.ViewModels;
 using LibVLCSharp.Shared;
 
 namespace EchoNet.Services;
@@ -10,13 +11,15 @@ public class VlcAudioService : IAudioService, IDisposable
 
     private Media? _currentMedia;
 
-    public string? CurrentSong { get; private set; }
+    public Guid? CurrentSongID { get; set; }
+    private SongMetadata _currentSongMetadata = new SongMetadata{};
 
     public TimeSpan Duration => _player.Length > 0 ? TimeSpan.FromMilliseconds(_player.Length) : TimeSpan.Zero;
 
     public TimeSpan CurrentTime => _player.Time > 0 ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero;
     public int Volume => _player.Volume;
     public bool IsPlaying => _player.IsPlaying;
+    public bool IsSeekable => _player.IsSeekable;
 
     public VlcAudioService(ILogger<VlcAudioService> logger)
     {
@@ -34,17 +37,33 @@ public class VlcAudioService : IAudioService, IDisposable
         _logger.LogInformation("VLC Audio Service initialized");
     }
 
-    public Task LoadAsync(string filePath)
+    public void SetSongMetadata(SongMetadata song)
     {
-        _logger.LogInformation("Loading track: {FilePath}", filePath);
+        if (_currentSongMetadata == song) {return;}
+        _currentSongMetadata = song;
+    }
+
+    public SongMetadata GetSongMetadata()
+    {
+        return _currentSongMetadata;
+    }
+
+    public Task LoadAsync(string filePath, TimeSpan? startTime = null)
+    {
+        _logger.LogInformation("Loading song: {FilePath}", filePath);
 
         _currentMedia?.Dispose();
 
         _currentMedia = new Media(_libVlc, filePath, FromType.FromPath);
 
-        _player.Media = _currentMedia;
+        // If we have a start time, add it as a media option (in seconds)
+        if (startTime.HasValue && startTime.Value.TotalSeconds > 0)
+        {
+            var seconds = (int)startTime.Value.TotalSeconds;
+            _currentMedia.AddOption($":start-time={seconds}");
+        }
 
-        CurrentSong = filePath;
+        _player.Media = _currentMedia;
 
         return Task.CompletedTask;
     }
