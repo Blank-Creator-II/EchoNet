@@ -52,7 +52,7 @@ public static class MetadataHelper
             LastModifiedUtc = info.LastWriteTimeUtc,
             Duration = TimeSpan.FromSeconds(song.Duration),
             FormattedDuration = TimeSpan.FromSeconds(song.Duration).ToString(@"m\:ss"),   // format "3:20"
-            CreatedAt = _song.CreatedAt.ToString("yyyy-MM-dd"),
+            CreatedAt = _song.CreatedAt.ToString("o"), // formated to be specfic to help the sorter
             CoverArtBytes = cover?.Bytes,
             CoverArtContentType = cover?.ContentType
         };

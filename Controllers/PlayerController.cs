@@ -77,7 +77,7 @@ public class PlayerController : Controller
     {
         return Json(new
         {
-            currentSongId = _audio.CurrentSongID,
+            id = _audio.CurrentSongID,
             currentTime = _audio.CurrentTime.TotalSeconds,
             duration = _audio.Duration.TotalSeconds,
             isPlaying = _audio.IsPlaying,
@@ -113,7 +113,7 @@ public class PlayerController : Controller
             });
         }
 
-        var success = await _libScannerService.RunFirstTimeSetupAsync(paths, cancellationToken);
+        var success = await _libScannerService.ScanFoldersAsync(paths, cancellationToken);
 
         if (!success)
         {

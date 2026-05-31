@@ -63,10 +63,6 @@ async function fetchPlayerStatus() {
 
         window.__playerStatus = data;
 
-        window.dispatchEvent(
-            new CustomEvent('playerStatusUpdated', { detail: data })
-        );
-
         totalDuration = data.duration > 0 ? data.duration : 0;
         const currentTime = data.currentTime > 0 ? data.currentTime : 0;
         const fraction = totalDuration > 0 ? currentTime / totalDuration : 0;
@@ -393,12 +389,11 @@ async function updatePlayerBar(song) {
         // If cover art exists and isn't just an empty string/null
         if (song.coverArtDataUri && song.coverArtDataUri.trim() !== "") {
             coverArtContainer.innerHTML = `
-                <img class="song-thumb" src="${song.coverArtDataUri}" alt="" loading="lazy" 
-                     onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div class=\'playbar-artwork-placeholder\'>♪</div>')">
+                <img class="song-thumb" src="${song.coverArtDataUri}" alt="" loading="lazy" />
             `;
         } else {
             // Fallback placeholder directly if no string data is returned
-            coverArtContainer.innerHTML = '<div class="playbar-artwork-placeholder">♪</div>';
+            coverArtContainer.innerHTML = '<div class="playbar-artwork-placeholder"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="var(--accent)"><path d="M480-254 330-104q-23 23-56 23t-56-23L104-218q-23-23-23-56t23-56l150-150-150-150q-23-23-23-56t23-56l114-114q23-23 56-23t56 23l150 150 150-150q23-23 56-23t56 23l114 114q23 23 23 56t-23 56L706-480l150 150q23 23 23 56t-23 56L742-104q-23 23-56 23t-56-23L480-254Zm28.5-277.5Q520-543 520-560t-11.5-28.5Q497-600 480-600t-28.5 11.5Q440-577 440-560t11.5 28.5Q463-520 480-520t28.5-11.5ZM310-536l114-114-150-150-114 114 150 150Zm90 96q17 0 28.5-11.5T440-480q0-17-11.5-28.5T400-520q-17 0-28.5 11.5T360-480q0 17 11.5 28.5T400-440Zm108.5 68.5Q520-383 520-400t-11.5-28.5Q497-440 480-440t-28.5 11.5Q440-417 440-400t11.5 28.5Q463-360 480-360t28.5-11.5ZM560-440q17 0 28.5-11.5T600-480q0-17-11.5-28.5T560-520q-17 0-28.5 11.5T520-480q0 17 11.5 28.5T560-440Zm-24 130 150 150 114-114-150-150-114 114ZM339-621Zm282 282Z"/></svg></div>';
         }
     }
 

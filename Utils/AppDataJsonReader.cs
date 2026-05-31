@@ -57,18 +57,54 @@ public class AppDataJsonReader
     }
 
     // Updates the in-memory state without writing on disk.
-    public void UpdateInMemory()
+    // The function uses 'params' to accept any number of (Target, object) pairs
+    public void UpdateInMemory(params (AppDataTarget Target, object DataValue)[] items)
     {
-        AppData newData = new AppData
+        // Initialize local variables with fresh data from services
+        var theme = _themeService.GetTheme().Name;
+        var songMetadata = _audio.GetSongMetadata();
+        var position = _audio.CurrentTime;
+        var volume = _audio.Volume;
+        var viewType = _currentData.ViewType;
+        var sortType = _currentData.SortType;
+
+        // Override updates based on explicit targets
+        foreach (var (target, dataValue) in items)
         {
-            Theme = _themeService.GetTheme().Name,
-            songMetadata = _audio.GetSongMetadata(),
-            Position = _audio.CurrentTime,
-            Volume = _audio.Volume
+            switch (target)
+            {
+                case AppDataTarget.Theme when dataValue is string newTheme:
+                    theme = newTheme;
+                    break;
+                case AppDataTarget.SongMetadata when dataValue is SongMetadata newMetadata:
+                    songMetadata = newMetadata;
+                    break;
+                case AppDataTarget.Position when dataValue is TimeSpan newPosition:
+                    position = newPosition;
+                    break;
+                case AppDataTarget.Volume when dataValue is int newVolume:
+                    volume = newVolume;
+                    break;
+                case AppDataTarget.ViewType when dataValue is string newViewType:
+                    viewType = newViewType;
+                    break;
+                case AppDataTarget.SortType when dataValue is string newSortType:
+                    sortType = newSortType;
+                    break;
+            }
+        }
+
+        _currentData = new AppData 
+        {
+            Theme = theme,
+            songMetadata = songMetadata,
+            Position = position,
+            Volume = volume,
+            ViewType = viewType,
+            SortType = sortType
         };
-        _currentData = newData;
         
-        _logger.LogInformation("AppData on memory updated");
+        _logger.LogInformation("AppData in memory updated successfully.");
     }
 
     // Saves the current in-memory state (or provided state) to the disk.

@@ -1,5 +1,5 @@
 {
-  "Theme": "Frosty Abyss",
+  "Theme": "Cobalt Flame",
   "songMetadata": {
     "Id": "00000000-0000-0000-0000-000000000000",
     "FilePath": "",
@@ -18,5 +18,7 @@
     "CoverArtDataUri": null
   },
   "Position": "00:00:00",
-  "Volume": 100
+  "Volume": 100,
+  "ViewType": "list",
+  "SortType": "az"
 }

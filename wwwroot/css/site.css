@@ -262,6 +262,13 @@ a, a:visited, a:hover, a:active {
     font-size: 3rem;
 }
 
+.playbar-artwork-placeholder svg {
+    width: 65%;
+    height: 65%;
+    display: block;  /* Prevents inline line-height spacing anomalies */
+    flex-shrink: 0;  /* Prevents it from getting squished by flex layouts */
+}
+
 .song-details {
     display: flex;
     flex-direction: column;

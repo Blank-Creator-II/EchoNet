@@ -2,6 +2,7 @@ using EchoNet.Data;
 using EchoNet.Models;
 using EchoNet.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace EchoNet.Services;
 
@@ -27,38 +28,39 @@ public class LibScannerService : ILibScannerService
         _logger = logger;
     }
 
-    public async Task<bool> NeedsFirstTimeSetupAsync(CancellationToken cancellationToken = default)
+    // Scans provided folders, skipping any that are already tracked in the library.
+    public async Task<bool> ScanFoldersAsync(IReadOnlyList<string> selectedFolders, CancellationToken cancellationToken = default)
     {
-        var hasFolders = await _db.MusicFolders.AnyAsync(cancellationToken);
-        return !hasFolders;
-    }
-
-    public async Task<bool> RunFirstTimeSetupAsync(IReadOnlyList<string> selectedFolders, CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("Starting first-time library setup.");
-
-        var needsSetup = await NeedsFirstTimeSetupAsync(cancellationToken);
-        if (!needsSetup)
-        {
-            _logger.LogInformation("Library setup already exists. Skipping first-time setup.");
-            return true;
-        }
+        _logger.LogInformation("Starting library scan.");
 
         if (selectedFolders.Count == 0)
         {
-            _logger.LogWarning("No folders were selected. First-time setup aborted.");
+            _logger.LogWarning("No folders were provided for scanning.");
             return false;
         }
 
-        var musicFolders = new List<MusicFolder>();
+        // Fetch existing tracked folders from DB to check for duplicates
+        var existingPaths = await _db.MusicFolders
+            .Select(f => f.Path)
+            .ToListAsync(cancellationToken);
 
+        var existingFoldersSet = new HashSet<string>(existingPaths, StringComparer.OrdinalIgnoreCase);
+        var musicFoldersToTrack = new List<MusicFolder>();
+
+        // Filter out duplicates and invalid directories
         foreach (var folderPath in selectedFolders)
         {
             var fullPath = NormalizePath(folderPath);
 
+            if (existingFoldersSet.Contains(fullPath))
+            {
+                _logger.LogInformation("Folder already exists in library, skipping: {FolderPath}", fullPath);
+                continue;
+            }
+
             if (!Directory.Exists(fullPath))
             {
-                _logger.LogWarning("Selected folder does not exist: {FolderPath}", fullPath);
+                _logger.LogWarning("Provided folder does not exist: {FolderPath}", fullPath);
                 continue;
             }
 
@@ -70,58 +72,68 @@ public class LibScannerService : ILibScannerService
                 LastScannedAt = DateTime.UtcNow
             };
 
-            musicFolders.Add(folder);
-            _logger.LogInformation("Accepted music folder: {FolderPath}", fullPath);
+            musicFoldersToTrack.Add(folder);
+            _logger.LogInformation("Accepted new music folder for tracking: {FolderPath}", fullPath);
         }
 
-        if (musicFolders.Count == 0)
+        // If all input folders were duplicates or invalid, exit early
+        if (musicFoldersToTrack.Count == 0)
         {
-            _logger.LogWarning("No valid folders remained after validation.");
-            return false;
+            _logger.LogInformation("No new folders to process.");
+            return true; 
         }
 
-        _db.MusicFolders.AddRange(musicFolders);
+        // Save new folders to the database
+        _db.MusicFolders.AddRange(musicFoldersToTrack);
         await _db.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Saved {FolderCount} music folder(s). Starting initial scan.", musicFolders.Count);
+        _logger.LogInformation("Saved {FolderCount} new music folder(s). Beginning file discovery.", musicFoldersToTrack.Count);
 
         var songs = new List<Song>();
 
-        foreach (var folder in musicFolders)
+        // Scan only the newly added folders
+        foreach (var folder in musicFoldersToTrack)
         {
-            foreach (var filePath in Directory.EnumerateFiles(folder.Path, "*.*", SearchOption.AllDirectories))
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var extension = Path.GetExtension(filePath);
-                if (!SupportedExtensions.Contains(extension))
-                    continue;
-
-                try
+                foreach (var filePath in Directory.EnumerateFiles(folder.Path, "*.*", SearchOption.AllDirectories))
                 {
-                    var song = MetadataHelper.CreateSongFromFilePath(filePath, folder.Id);
-                    songs.Add(song);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var extension = Path.GetExtension(filePath);
+                    if (!SupportedExtensions.Contains(extension))
+                        continue;
+
+                    try
+                    {
+                        var song = MetadataHelper.CreateSongFromFilePath(filePath, folder.Id);
+                        songs.Add(song);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to read metadata for file: {FilePath}", filePath);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to read metadata for file: {FilePath}", filePath);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error accessing directory: {FolderPath}", folder.Path);
             }
         }
 
-        _logger.LogInformation("Initial scan found {SongCount} song(s). Saving to database.", songs.Count);
+        _logger.LogInformation("Scan found {SongCount} new song(s). Saving to database.", songs.Count);
 
         if (songs.Count > 0)
         {
             var success = await _songService.AddSongsAsync(songs);
             if (!success)
             {
-                _logger.LogError("Initial song save failed.");
+                _logger.LogError("Failed to save newly discovered songs.");
                 return false;
             }
         }
 
-        _logger.LogInformation("First-time library setup complete.");
+        _logger.LogInformation("Library scan complete.");
         return true;
     }
 

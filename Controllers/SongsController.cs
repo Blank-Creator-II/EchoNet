@@ -10,11 +10,13 @@ public class SongsController : Controller
 {
     private readonly ILogger<SongsController> _logger;
     private readonly ISongService _songService;
+    private readonly AppDataJsonReader _appDataReader;
 
-    public SongsController(ILogger<SongsController> logger, ISongService songService)
+    public SongsController(ILogger<SongsController> logger, ISongService songService, AppDataJsonReader appDataReader)
     {
         _logger = logger;
         _songService = songService;
+        _appDataReader = appDataReader;
     }
 
     public async Task<IActionResult> Index()
@@ -28,5 +30,12 @@ public class SongsController : Controller
         }
 
         return View(metadataSongs);
+    }
+
+    [HttpPost("Song/SaveState")]
+    public ActionResult SaveState([FromBody] SongPageStateRequest request)
+    {   
+        _appDataReader.UpdateInMemory([(AppDataTarget.ViewType, request.viewType),(AppDataTarget.SortType, request.sortType)]);
+        return Ok();
     }
 }

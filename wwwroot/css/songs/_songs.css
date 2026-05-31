@@ -1,7 +1,3 @@
-/* ============================================================
-   songs-page.css  —  adapted to global theme variables
-   ============================================================ */
-
 /* Inherit layout font & remove any body-level overrides */
 .songs-page {
     width: 100%;
@@ -182,7 +178,7 @@
 .col-album   { width: 20%; flex-shrink: 0; padding-left: 4px; padding-top: 10px; }
 .col-duration{ width: 80px; text-align: right; flex-shrink: 0; padding-right: 6px; padding-top: 10px; }
 
-/* ── SCROLLABLE SONG_ LIST ── */
+/* ── SCROLLABLE SONG LIST ── */
 .songs-table-container {
     flex: 1;
     overflow-y: auto;
@@ -213,21 +209,23 @@
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 30%, transparent);
 }
 
-.song-row:hover {
+.songs-table .song-row:hover,
+.songs-table .song-row.focused {
     background: var(--surface-2);   /* lighter surface shade */
     transform: translateY(-1px);
     box-shadow: 0 0 0 1px var(--border), 0 6px 18px rgba(0,0,0,0.15);
 }
 
-.song-row:nth-child(even) {
+.songs-table .song-row:nth-child(even) {
     background: var(--bg);
 }
 
-.song-row:nth-child(even):hover {
+.songs-table .song-row:nth-child(even):hover,
+.songs-table .song-row:nth-child(even).focused {
     background: color-mix(in srgb, var(--bg) 85%, var(--surface-2));
 }
 
-.song-row td {
+.songs-table .song-row td {
     padding: 5px 0;
     vertical-align: middle;
     color: var(--muted);
@@ -235,8 +233,8 @@
     min-width: 0;
 }
 
-.song-row td:first-child { border-radius: 12px 0 0 12px; text-align: center; }
-.song-row td:last-child  { border-radius: 0 12px 12px 0; text-align: right; padding-right: 14px; }
+.songs-table .song-row td:first-child { border-radius: 12px 0 0 12px; text-align: center; }
+.songs-table .song-row td:last-child  { border-radius: 0 12px 12px 0; text-align: right; padding-right: 14px; }
 
 .row-index-wrap {
     position: relative;
@@ -262,8 +260,12 @@
     transition: opacity 0.15s;
 }
 
-.song-row:hover .row-num      { opacity: 0; }
-.song-row:hover .row-play-icon{ opacity: 1; }
+/* Handles swapping index numbers for play icons on both hover and focus */
+.songs-table .song-row:hover .row-num,
+.songs-table .song-row.focused .row-num { opacity: 0; }
+
+.songs-table .song-row:hover .row-play-icon,
+.songs-table .song-row.focused .row-play-icon { opacity: 1; }
 
 /* Equalizer bars */
 .eq-bars {
@@ -286,8 +288,8 @@
     to   { transform: scaleY(1); }
 }
 
-.song-row.playing .row-num      { display: none; }
-.song-row.playing .row-play-icon{ display: none; }
+.songs-table .song-row.playing .row-num      { display: none; }
+.songs-table .song-row.playing .row-play-icon{ display: none; }
 .song-row.playing .eq-bars      { display: flex; }
 
 /* Artwork */
@@ -309,6 +311,13 @@
     display: flex; align-items: center; justify-content: center;
     color: var(--muted);
     font-size: 0.8rem;
+}
+
+.artwork-placeholder svg {
+    width: 65%;
+    height: 65%;
+    display: block;  
+    flex-shrink: 0;  
 }
 
 /* Title */
@@ -353,23 +362,22 @@
     padding-right: 6px;
 }
 
-/* Hover states */
-.song-row:hover .title-text   { color: var(--text); }
-.song-row:hover .artist-cell  { color: var(--text); }
-.song-row:hover .album-cell  { color: var(--text); }
-.song-row:hover .duration-cell{ color: var(--text); }
-.song-row:hover .row-num      { color: var(--text); }
+.songs-table .song-row:hover .title-text,   .songs-table .song-row.focused .title-text   { color: var(--text); }
+.songs-table .song-row:hover .artist-cell,  .songs-table .song-row.focused .artist-cell  { color: var(--text); }
+.songs-table .song-row:hover .album-cell,   .songs-table .song-row.focused .album-cell   { color: var(--text); }
+.songs-table .song-row:hover .duration-cell,.songs-table .song-row.focused .duration-cell{ color: var(--text); }
+.songs-table .song-row:hover .row-num,      .songs-table .song-row.focused .row-num      { color: var(--text); }
 
 /* Playing state */
-.song-row.playing:nth-child(even),
-.song-row.playing {
+.songs-table .song-row.playing:nth-child(even),
+.songs-table .song-row.playing {
     background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 6px 16px rgba(0,0,0,0.15);
 }
-.song-row.playing .title-text  { color: var(--accent); }
-.song-row.playing .artist-cell { color: var(--accent); }
-.song-row.playing .album-cell  { color: var(--accent); }
-.song-row.playing .duration-cell{ color: var(--accent); }
+.songs-table .song-row.playing .title-text   { color: var(--accent); }
+.songs-table .song-row.playing .artist-cell  { color: var(--accent); }
+.songs-table .song-row.playing .album-cell   { color: var(--accent); }
+.songs-table .song-row.playing .duration-cell{ color: var(--accent); }
 
 /* Empty state */
 .empty-state {
@@ -380,9 +388,120 @@
     font-size: 0.875rem;
 }
 
+
+/* ============================================================
+   GRID VIEW
+   ============================================================ */
+.songs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+    padding: 10px 8px 24px;
+}
+
+.song-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+}
+
+
+.song-card:hover,
+.song-card.focused {
+    background: var(--surface-2);
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px var(--border), 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.song-card.playing {
+    background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.card-artwork-area {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.card-artwork-area .artwork-thumb,
+.card-artwork-area .artwork-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.card-play-overlay,
+.card-eq-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: #ffffff;
+    font-size: 1.5rem;
+}
+
+.song-card:hover .card-play-overlay,
+.song-card.focused .card-play-overlay {
+    opacity: 1;
+}
+
+.song-card.playing .card-eq-overlay {
+    opacity: 1;
+}
+
+.song-card.playing:hover .card-play-overlay,
+.song-card.playing.focused .card-play-overlay {
+    opacity: 0; /* Ensures EQ stays visible on hover/focus when playing */
+}
+
+.card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-card.playing .card-title {
+    color: var(--accent);
+}
+
+.card-artist {
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-card.playing .card-artist {
+    color: var(--accent);
+}
+
+
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-    .songs-page { height: 100%; }   /* already 100%, just in case */
+    .songs-page { height: 100%; }   
     .header-nav { padding: 12px 14px; }
     .column-headers { padding: 0 14px 8px; font-size: 0.63rem; }
     .col-index, .col-artwork { width: 40px; }
@@ -395,6 +514,10 @@
     .songs-table colgroup col.col-artist  { width: 20%; }
     .songs-table colgroup col.col-album   { width: 18%; }
     .songs-table colgroup col.col-duration{ width: 66px; }
+    .songs-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+    }
 }
 
 @media (max-width: 520px) {
@@ -403,4 +526,7 @@
     .sort-btn { font-size: 0.7rem; padding: 5px 9px; }
     .col-album { display: none; }
     .songs-table colgroup col.col-album { width: 0; }
+    .songs-grid {
+        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    }
 }
