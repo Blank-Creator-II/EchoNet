@@ -1,5 +1,7 @@
+using EchoNet.Hubs;
 using EchoNet.ViewModels;
 using LibVLCSharp.Shared;
+using Microsoft.AspNetCore.SignalR;
 
 namespace EchoNet.Services;
 
@@ -8,6 +10,7 @@ public class VlcAudioService : IAudioService, IDisposable
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _player;
     private readonly ILogger<VlcAudioService> _logger;
+    private readonly IHubContext<AudioHub> _hubContext; // Inject SignalR Hub Context
 
     private Media? _currentMedia;
 
@@ -21,9 +24,10 @@ public class VlcAudioService : IAudioService, IDisposable
     public bool IsPlaying => _player.IsPlaying;
     public bool IsSeekable => _player.IsSeekable;
 
-    public VlcAudioService(ILogger<VlcAudioService> logger)
+    public VlcAudioService(ILogger<VlcAudioService> logger, IHubContext<AudioHub> hubContext)
     {
         _logger = logger;
+        _hubContext = hubContext;
 
         Core.Initialize();
 
@@ -34,7 +38,45 @@ public class VlcAudioService : IAudioService, IDisposable
             Volume = 100
         };
 
-        _logger.LogInformation("VLC Audio Service initialized");
+        // Bind LibVLC events directly to SignalR Broadcasts
+        _player.TimeChanged += OnPlayerTimeChanged;
+        _player.Paused += OnPlayerStateChanged;
+        _player.Playing += OnPlayerStateChanged;
+        _player.Stopped += OnPlayerStateChanged;
+
+        _logger.LogInformation("VLC Audio Service initialized with SignalR links");
+    }
+
+    private async void OnPlayerTimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
+    {
+        // Don't spam the network infinitely if nothing is playing or length is invalid
+        if (_player.Length <= 0) return;
+
+        // Broadcast a status payload down to ALL connected scripts over web sockets instantly
+        await _hubContext.Clients.All.SendAsync("ReceiveStatus", new
+        {
+            id = CurrentSongID,
+            currentTime = TimeSpan.FromMilliseconds(e.Time).TotalSeconds,
+            duration = Duration.TotalSeconds,
+            isPlaying = _player.IsPlaying,
+            isSeekable = _player.IsSeekable,
+            volume = _player.Volume
+        });
+
+        _logger.LogDebug("SignalR sent time data {data}", TimeSpan.FromMilliseconds(e.Time).TotalSeconds);
+    }
+
+    private async void OnPlayerStateChanged(object? sender, EventArgs e)
+    {
+        // Broadcast whenever state toggles (Play/Pause/Stop)
+        await _hubContext.Clients.All.SendAsync("ReceiveStateChange", new
+        {
+            id = CurrentSongID,
+            isPlaying = _player.IsPlaying,
+            isSeekable = _player.IsSeekable
+        });
+
+        _logger.LogDebug("SignalR sent state data {data}", _player.IsPlaying);
     }
 
     public void SetSongMetadata(SongMetadata song)
@@ -103,6 +145,10 @@ public class VlcAudioService : IAudioService, IDisposable
 
     public void Dispose()
     {
+        _player.TimeChanged -= OnPlayerTimeChanged;
+        _player.Paused -= OnPlayerStateChanged;
+        _player.Playing -= OnPlayerStateChanged;
+        _player.Stopped -= OnPlayerStateChanged;
         _currentMedia?.Dispose();
         _player.Dispose();
         _libVlc.Dispose();

@@ -2,8 +2,6 @@ let totalDuration = 0;
 let currentProgress = 0;
 let isDragging = false;
 let isVolumeDragging = false;
-let pollingTimeout = null;
-let isPollingActive = false;
 
 const progressSong = document.getElementById('progressSong');
 const progressFill = document.getElementById('progressFill');
@@ -46,66 +44,43 @@ function setProgress(fraction) {
         formatTime(totalDuration);
 }
 
-// Optimized Core Polling Logic using safe recursive setTimeout
-async function fetchPlayerStatus() {
-    // If polling was explicitly stopped or user is dragging, do not schedule next jump
-    if (!isPollingActive) return;
-    if (isDragging) {
-        // Check back in 250ms without hitting the network
-        pollingTimeout = setTimeout(fetchPlayerStatus, 250);
-        return;
-    }
+// -- signalR arch --
+const audioConnection = new signalR.HubConnectionBuilder()
+    .withUrl("/audioHub")
+    .withAutomaticReconnect() // Automatically handles dropouts
+    .build();
 
-    try {
-        const response = await fetch('/Player/Status');
-        if (!response.ok) throw new Error('Status fetch failed');
-        const data = await response.json();
+// Handle stream updates sent directly from VLC's TimeChanged event
+audioConnection.on("ReceiveStatus", (data) => {
+    window.__playerStatus = data;
 
-        window.__playerStatus = data;
+    // Sync state to visual elements 
+    window.dispatchEvent(new CustomEvent('playerStatusUpdated', { detail: data }));
 
-        totalDuration = data.duration > 0 ? data.duration : 0;
-        const currentTime = data.currentTime > 0 ? data.currentTime : 0;
-        const fraction = totalDuration > 0 ? currentTime / totalDuration : 0;
+    // Do not fight the user's cursor positions while they are dragging the progress slider
+    if (isDragging) return;
 
-        setProgress(fraction);
+    totalDuration = data.duration > 0 ? data.duration : 0;
+    const currentTime = data.currentTime > 0 ? data.currentTime : 0;
+    const fraction = totalDuration > 0 ? currentTime / totalDuration : 0;
 
-        /* no need to poll for volume since it can't change without envoking setVolumeUI
-        if (!isVolumeDragging && data.volume !== undefined) {
-            setVolumeUI(data.volume);
-        }
-        */
+    setProgress(fraction);
+});
 
-    } catch (err) {
-        console.error("Polling error:", err);
-    } finally {
-        // Only schedule the next poll after the current network request finishes
-        if (isPollingActive) {
-            pollingTimeout = setTimeout(fetchPlayerStatus, 250);
-        }
-    }
-}
+// Handle sudden state events (Play, Pause, Stop)
+audioConnection.on("ReceiveStateChange", (data) => {
+    window.__playerStatus = window.__playerStatus || {};
+    window.__playerStatus.isPlaying = data.isPlaying;
+    window.__playerStatus.isSeekable = data.isSeekable;
+    window.__playerStatus.id = data.id;
 
-// Polling Controllers
-function startPolling() {
-    if (isPollingActive) return; 
-    isPollingActive = true;
-    
-    // Execute immediately, subsequent calls chain recursively through setTimeout
-    fetchPlayerStatus(); 
-    console.log("Started Polling");
-}
+    updatePlayBtnUI(data);
+});
 
-function stopPolling() {
-    isPollingActive = false;
-    if (pollingTimeout) {
-        clearTimeout(pollingTimeout);
-        pollingTimeout = null;
-    }
-    console.log("Stopped Polling");
-}
-
-window.addEventListener('startPlayerPolling', startPolling);
-window.addEventListener('stopPlayerPolling', stopPolling);
+// Start the real-time websocket connection loop
+audioConnection.start()
+    .then(() => console.log("Real-time Audio Sync Active via SignalR"))
+    .catch(err => console.error("SignalR Init Failure: ", err));
 
 function getProgressFraction(event) {
 
@@ -337,15 +312,6 @@ async function updatePlayBtnUI(data) {
     const playBtn = document.getElementById('playPauseBtn');
 
     if (playBtn) { playBtn.innerHTML = data.isPlaying ? pauseIconSVG() : playIconSVG(); }
-
-    if (data.isPlaying)
-    {
-        window.dispatchEvent(new CustomEvent('startPlayerPolling'));
-    }
-    else
-    {
-        window.dispatchEvent(new CustomEvent('stopPlayerPolling'));
-    }
 }
 
 // Mute / Unmute
@@ -370,7 +336,7 @@ function updateMuteBtnUIFromVolume(vol) {
     muteBtn.innerHTML = shouldBeMuted ? mutedIconSVG() : unmutedIconSVG();
 }
 
-async function updatePlayerBar(song) {
+async function updateSongInfo(song) {
 
     const titleEl = document.querySelector('.song-title');
     const artistEl = document.querySelector('.song-artist');
@@ -397,7 +363,6 @@ async function updatePlayerBar(song) {
         }
     }
 
-    window.dispatchEvent(new CustomEvent('startPlayerPolling'));
     await savePlayerState(song);
 }
 
@@ -424,25 +389,24 @@ async function savePlayerState(song) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Instantly check the server status the moment the new page mounts
+        // Check the server status once on page boot
         const response = await fetch('/Player/Status');
         if (!response.ok) throw new Error('Initial status check failed');
         const data = await response.json();
 
-        // Cache the data globally 
+        
         window.__playerStatus = data;
 
-        // Immediately sync the visual states so the UI doesn't flicker
+        // Sync the playbar timeline instantly
         totalDuration = data.duration > 0 ? data.duration : 0;
         const currentTime = data.currentTime > 0 ? data.currentTime : 0;
         const fraction = totalDuration > 0 ? currentTime / totalDuration : 0;
         
         setProgress(fraction);
+        updatePlayBtnUI(data);
 
-        // trigger the polling if the media engine is actively running
-        if (data.isPlaying) {
-            startPolling(); // Call the function directly to avoid event execution race conditions with event dispach
-        }
+        // Broadcast this so rendering functions catches the layout initialization update
+        window.dispatchEvent(new CustomEvent('playerStatusUpdated', { detail: data }));
 
     } catch (err) {
         console.error("Failed to auto-heal player session on page load:", err);

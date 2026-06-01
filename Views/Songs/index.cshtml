@@ -84,9 +84,9 @@
             }
 
             const data = await response.json();
-
+    
             // update player bar immediately
-            await updatePlayerBar(data.song);
+            await updateSongInfo(data.song);
 
             // update play button immediately
             updatePlayBtnUI({isPlaying: data.isPlaying});

@@ -124,7 +124,7 @@
                 // Notify external handler
                 if (song && typeof songClickHandler === 'function') {
                     songClickHandler(song);
-                    syncPlayingRow(song);
+                    //syncPlayingRow(song);
                 }
             });
         }
@@ -220,24 +220,20 @@
                 var song = songs.filter(function (s) { return String(s.Id) === songId; })[0];
                 if (song && typeof songClickHandler === 'function') {
                     songClickHandler(song);
-                    syncPlayingRow(song);
+                    //syncPlayingRow(song);
                 }
             }
         }
     });
 
-    async function syncPlayingRow(data = window.__playerStatus) {
+    async function syncPlayingRow(data) {
+        // Fallback to global state if no data argument was passed at all
+        var targetData = data || window.__playerStatus;
+        if (!targetData) return; // Exit early if there's no data to extract an ID from
 
-        if (!data) {
-            const response = await fetch('/Player/Status');
-            data = await response.json();
-        }
-
-        if (!data.Id && !data.id) {
-            return;
-        }
-
-        const ID = data.Id || data.id;
+        // Supports: songMetadata.Id, fallback/global.id, or event.detail.id
+        var ID = targetData.Id || targetData.id || targetData.detail?.id;
+        if (!ID) return;
 
         // Query over the parent container to clear/set regardless of active view
         const rows = tableContainer.querySelectorAll('.song-row');
@@ -247,7 +243,7 @@
         activeRows.forEach(r => r.classList.add('playing'));
     }
 
-    //window.addEventListener('playerStatusUpdated', syncPlayingRow);
+    window.addEventListener('playerStatusUpdated', syncPlayingRow);
 
     async function savePageState(_viewType,_sortState) {
         try {
@@ -276,5 +272,4 @@
     // -- Kick off --
     updateLayoutVisibility();
     sortSongs(sortState);   // renders with the saved AppData order from the raw data
-    await syncPlayingRow();
 })();

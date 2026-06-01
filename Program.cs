@@ -1,6 +1,7 @@
 using EchoNet.Services;
 using EchoNet.Data;
 using EchoNet.Utils;
+using EchoNet.Hubs;
 using LibVLCSharp.Shared;
 using System.Runtime.InteropServices;
 using Microsoft.EntityFrameworkCore;
@@ -24,12 +25,15 @@ builder.WebHost.UseUrls("http://127.0.0.1:9292");
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+// Add SignalR framework services
+builder.Services.AddSignalR();
 // Add background hosted service
 builder.Services.AddHostedService<AudioInitializationService>();
 // Add singleton service
 builder.Services.AddSingleton<IAudioService, VlcAudioService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
 builder.Services.AddSingleton<AppDataJsonReader>();
+builder.Services.AddSingleton<QueueManager>();
 // Add scoped service
 builder.Services.AddScoped<ILibScannerService, LibScannerService>();
 builder.Services.AddScoped<ISongService, SongService>();
@@ -60,6 +64,9 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthorization();
+
+// Map the Hub endpoint URL
+app.MapHub<AudioHub>("/audioHub");
 
 app.MapControllerRoute(
     name: "default",
