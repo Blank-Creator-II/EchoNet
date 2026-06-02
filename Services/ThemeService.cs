@@ -18,7 +18,7 @@ public class ThemeService : IThemeService
     public void SetTheme(string themeName)
     {
         if (_currentTheme == themeName) {return;}
-        _logger.LogInformation($"Theme Set to {themeName}");
+        _logger.LogInformation("Theme changed to: {ThemeName}", themeName);
         _currentTheme = themeName;
     }
 
@@ -28,6 +28,7 @@ public class ThemeService : IThemeService
 
         if (!File.Exists(path))
         {
+            _logger.LogWarning("Theme file not found at {Path}. Falling back to default theme.", path);
             path = Path.Combine(_env.WebRootPath, "theme", "Crimson Shadow.json");
         }
 
@@ -50,7 +51,8 @@ public class ThemeService : IThemeService
             return themes;
         }
 
-        var jsonFiles = Directory.GetFiles(themeFolder, "*.json");
+        // Order alphabetically by file path/name to prevent arbitrary OS sequencing
+        var jsonFiles = Directory.GetFiles(themeFolder, "*.json").OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in jsonFiles)
         {

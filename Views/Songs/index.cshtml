@@ -83,14 +83,6 @@
                 return;
             }
 
-            const data = await response.json();
-    
-            // update player bar immediately
-            await updateSongInfo(data.song);
-
-            // update play button immediately
-            updatePlayBtnUI({isPlaying: data.isPlaying});
-
         } catch (err) {
             console.error(err);
         }

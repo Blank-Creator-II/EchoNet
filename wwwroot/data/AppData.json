@@ -1,13 +1,13 @@
 {
-  "Theme": "Cobalt Flame",
+  "Theme": "Aqua Depths",
   "songMetadata": {
     "Id": "00000000-0000-0000-0000-000000000000",
     "FilePath": "",
     "FileName": "",
-    "Title": "",
-    "Artist": null,
-    "Album": null,
-    "Genre": null,
+    "Title": "No Song Selected",
+    "Artist": "Unknown Artist",
+    "Album": "Unknown Album",
+    "Genre": "Unknown Genre",
     "FileSize": 0,
     "LastModifiedUtc": "0001-01-01T00:00:00",
     "Duration": "00:00:00",
@@ -18,7 +18,12 @@
     "CoverArtDataUri": null
   },
   "Position": "00:00:00",
-  "Volume": 100,
+  "Volume": 0,
   "ViewType": "list",
-  "SortType": "az"
+  "SortType": "az",
+  "playerState": {
+    "changeState": "NoLoop",
+    "queueState": "AZ"
+  },
+  "ShuffleSeed": 62604289
 }

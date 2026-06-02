@@ -3,8 +3,6 @@
 @inject EchoNet.Services.IThemeService ThemeService
 @inject EchoNet.Utils.AppDataJsonReader AppDataJsonReader
 @{
-    AppData? appData = AppDataJsonReader.Current;
-    ThemeService.SetTheme(appData.Theme);
     Theme theme = ThemeService.GetTheme();
 }
 

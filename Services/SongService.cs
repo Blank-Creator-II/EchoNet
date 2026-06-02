@@ -2,6 +2,7 @@ using EchoNet.Data;
 using EchoNet.Models;
 using EchoNet.ViewModels;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace EchoNet.Services;
 
@@ -61,6 +62,7 @@ public class SongService : ISongService
 
     public async Task<List<Song>> SearchByTitleAsync(string text)
     {
+        if (string.IsNullOrWhiteSpace(text)) return [];
         _logger.LogDebug("Searching songs by title with text: {SearchText}", text);
 
         return await _db.Songs
@@ -70,6 +72,7 @@ public class SongService : ISongService
 
     public async Task<List<Song>> SearchByGenreAsync(string genre)
     {
+        if (string.IsNullOrWhiteSpace(genre)) return [];
         _logger.LogDebug("Searching songs by genre: {Genre}", genre);
 
         return await _db.Songs
@@ -79,6 +82,7 @@ public class SongService : ISongService
 
     public async Task<List<Song>> SearchByArtistAsync(string artist)
     {
+        if (string.IsNullOrWhiteSpace(artist)) return [];
         _logger.LogDebug("Searching songs by artist with text: {Artist}", artist);
 
         return await _db.Songs
@@ -88,12 +92,14 @@ public class SongService : ISongService
 
     public async Task<Song?> GetSongByPathAsync(string path)
     {
+        if (string.IsNullOrWhiteSpace(path)) return null;
         return await _db.Songs
             .FirstOrDefaultAsync(s => s.FilePath == path);
     }
 
     public async Task<List<Song>> GeneralSearchAsync(string term)
     {
+        if (string.IsNullOrWhiteSpace(term)) return [];
         _logger.LogDebug("Performing general song search with term: {Term}", term);
 
         return await _db.Songs
@@ -134,6 +140,7 @@ public class SongService : ISongService
     public async Task<LibrarySyncResult> SyncLibraryAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting library sync.");
+        var stopwatch = Stopwatch.StartNew();
 
         var folders = await _db.MusicFolders
             .Where(f => f.IsEnabled)
@@ -169,7 +176,6 @@ public class SongService : ISongService
                 continue;
             }
 
-            _logger.LogInformation("Music folder accepted: {FolderPath}", folderPath);
             normalizedFolders.Add((folder, folderPath));
         }
 
@@ -180,8 +186,6 @@ public class SongService : ISongService
         }
 
         var folderIds = normalizedFolders.Select(x => x.Folder.Id).ToList();
-
-        _logger.LogInformation("Loading existing songs for {FolderCount} folder(s).", folderIds.Count);
 
         var existingSongs = await _db.Songs
             .Where(s => folderIds.Contains(s.MusicFolderId))
@@ -204,137 +208,137 @@ public class SongService : ISongService
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         _logger.LogDebug("Database transaction started for library sync.");
 
-        foreach (var (folder, folderPath) in normalizedFolders)
+        try
         {
-            _logger.LogInformation("Scanning folder: {FolderPath}", folderPath);
-
-            foreach (var filePath in Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories))
+            foreach (var (folder, folderPath) in normalizedFolders)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                _logger.LogInformation("Scanning folder: {FolderPath}", folderPath);
 
-                var extension = Path.GetExtension(filePath);
-                if (!SupportedExtensions.Contains(extension))
+                foreach (var filePath in Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories))
                 {
-                    _logger.LogDebug("Skipping unsupported file: {FilePath}", filePath);
-                    continue;
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                filesScanned++;
+                    var extension = Path.GetExtension(filePath);
+                    if (!SupportedExtensions.Contains(extension))
+                        continue;
 
-                var fullPath = NormalizePath(filePath);
-                if (!seenPaths.Add(fullPath))
-                {
-                    _logger.LogDebug("Skipping duplicate path during sync: {FilePath}", fullPath);
-                    continue;
-                }
+                    filesScanned++;
+                    var fullPath = NormalizePath(filePath);
+                    
+                    if (!seenPaths.Add(fullPath))
+                        continue;
 
-                var info = new FileInfo(fullPath);
+                    var info = new FileInfo(fullPath);
 
-                if (existingByPath.TryGetValue(fullPath, out var existingSong))
-                {
-                    var changed = false;
-
-                    if (existingSong.FileSize != info.Length)
+                    if (existingByPath.TryGetValue(fullPath, out var existingSong))
                     {
-                        _logger.LogDebug("File size changed for {FilePath}: {OldSize} -> {NewSize}",
-                            fullPath, existingSong.FileSize, info.Length);
-                        existingSong.FileSize = info.Length;
-                        changed = true;
-                    }
+                        var changed = false;
 
-                    if (existingSong.LastModifiedUtc != info.LastWriteTimeUtc)
-                    {
-                        _logger.LogDebug("Last modified time changed for {FilePath}.", fullPath);
-                        existingSong.LastModifiedUtc = info.LastWriteTimeUtc;
-                        changed = true;
-                    }
-
-                    if (!string.Equals(existingSong.FileName, info.Name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        _logger.LogDebug("File name changed for {FilePath}: {OldName} -> {NewName}",
-                            fullPath, existingSong.FileName, info.Name);
-
-                        existingSong.FileName = info.Name;
-                        changed = true;
-
-                        var derivedTitle = Path.GetFileNameWithoutExtension(info.Name);
-                        var oldDerivedTitle = Path.GetFileNameWithoutExtension(Path.GetFileName(existingSong.FilePath));
-
-                        if (string.IsNullOrWhiteSpace(existingSong.Title) ||
-                            string.Equals(existingSong.Title, oldDerivedTitle, StringComparison.OrdinalIgnoreCase))
+                        if (existingSong.FileSize != info.Length)
                         {
-                            _logger.LogDebug("Auto-updating title for {FilePath} to {Title}", fullPath, derivedTitle);
-                            existingSong.Title = derivedTitle;
+                            existingSong.FileSize = info.Length;
+                            changed = true;
                         }
-                    }
 
-                    if (changed)
-                    {
-                        updated++;
-                        _logger.LogInformation("Updated song entry: {FilePath}", fullPath);
+                        if (existingSong.LastModifiedUtc != info.LastWriteTimeUtc)
+                        {
+                            existingSong.LastModifiedUtc = info.LastWriteTimeUtc;
+                            changed = true;
+                        }
+
+                        if (!string.Equals(existingSong.FileName, info.Name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            existingSong.FileName = info.Name;
+                            changed = true;
+
+                            var derivedTitle = Path.GetFileNameWithoutExtension(info.Name);
+                            var oldDerivedTitle = Path.GetFileNameWithoutExtension(Path.GetFileName(existingSong.FilePath));
+
+                            if (string.IsNullOrWhiteSpace(existingSong.Title) ||
+                                string.Equals(existingSong.Title, oldDerivedTitle, StringComparison.OrdinalIgnoreCase))
+                            {
+                                existingSong.Title = derivedTitle;
+                            }
+                        }
+
+                        if (changed)
+                        {
+                            updated++;
+                            _logger.LogDebug("Updated song entry: {FilePath}", fullPath);
+                        }
+                        else
+                        {
+                            _logger.LogTrace("No changes detected for: {FilePath}", fullPath);
+                        }
                     }
                     else
                     {
-                        _logger.LogTrace("No changes detected for: {FilePath}", fullPath);
+                        var song = new Song
+                        {
+                            MusicFolderId = folder.Id,
+                            FilePath = fullPath,
+                            FileName = info.Name,
+                            Title = Path.GetFileNameWithoutExtension(info.Name),
+                            FileSize = info.Length,
+                            LastModifiedUtc = info.LastWriteTimeUtc,
+                            Duration = TimeSpan.Zero,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _db.Songs.Add(song);
+                        added++;
+
+                        _logger.LogDebug("Added new song: {Title} ({FilePath})", song.Title, song.FilePath);
                     }
                 }
-                else
-                {
-                    var song = new Song
-                    {
-                        MusicFolderId = folder.Id,
-                        FilePath = fullPath,
-                        FileName = info.Name,
-                        Title = Path.GetFileNameWithoutExtension(info.Name),
-                        FileSize = info.Length,
-                        LastModifiedUtc = info.LastWriteTimeUtc,
-                        Duration = TimeSpan.Zero,
-                        CreatedAt = DateTime.UtcNow
-                    };
 
-                    _db.Songs.Add(song);
-                    added++;
-
-                    _logger.LogInformation("Added new song: {Title} ({FilePath})", song.Title, song.FilePath);
-                }
+                folder.LastScannedAt = DateTime.UtcNow;
             }
 
-            folder.LastScannedAt = DateTime.UtcNow;
-            _logger.LogInformation("Finished scanning folder: {FolderPath}", folderPath);
-        }
+            var missingSongs = existingSongs.Where(s => !seenPaths.Contains(NormalizePath(s.FilePath))).ToList();
 
-        var missingSongs = existingSongs
-            .Where(s => !seenPaths.Contains(NormalizePath(s.FilePath)))
-            .ToList();
-
-        if (missingSongs.Count > 0)
-        {
-            _logger.LogWarning("{Count} song(s) missing from disk will be deleted.", missingSongs.Count);
-
-            foreach (var song in missingSongs)
+            if (missingSongs.Count > 0)
             {
-                _logger.LogWarning("Deleting missing song: {Title} ({FilePath})", song.Title, song.FilePath);
+                _logger.LogWarning("{Count} song(s) missing from disk will be deleted.", missingSongs.Count);
+
+                foreach (var song in missingSongs)
+                {
+                    _logger.LogWarning("Deleting missing song: {Title} ({FilePath})", song.Title, song.FilePath);
+                }
+
+                _db.Songs.RemoveRange(missingSongs);
+                deleted = missingSongs.Count;
             }
 
-            _db.Songs.RemoveRange(missingSongs);
-            deleted = missingSongs.Count;
+            var savedChanges = await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            stopwatch.Stop();
+            _logger.LogInformation("Library sync complete. Folders: {FoldersScanned}, Files Processed: {FilesScanned}, Added: {Added}, Modified: {Updated}, Evicted: {Deleted}. Executed in: {ElapsedMs}ms",
+                normalizedFolders.Count, filesScanned, added, updated, deleted, stopwatch.ElapsedMilliseconds);
+
+            return new LibrarySyncResult(
+                FoldersScanned: normalizedFolders.Count,
+                FilesScanned: filesScanned,
+                Added: added,
+                Updated: updated,
+                Deleted: deleted,
+                SkippedFolders: folders.Count - normalizedFolders.Count
+            );
         }
-
-        var savedChanges = await _db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Library sync complete. FoldersScanned={FoldersScanned}, FilesScanned={FilesScanned}, Added={Added}, Updated={Updated}, Deleted={Deleted}, SavedChanges={SavedChanges}",
-            normalizedFolders.Count, filesScanned, added, updated, deleted, savedChanges);
-
-        return new LibrarySyncResult(
-            FoldersScanned: normalizedFolders.Count,
-            FilesScanned: filesScanned,
-            Added: added,
-            Updated: updated,
-            Deleted: deleted,
-            SkippedFolders: folders.Count - normalizedFolders.Count
-        );
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Library synching was stopped via abortion signals.");
+            // Roll back changes safely since execution was interrupted
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Library synching engine faulted during process.");
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     private static string NormalizePath(string path)

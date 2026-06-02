@@ -21,14 +21,15 @@ public class SettingsController : Controller
 
     public IActionResult Index()
     {
+        _logger.LogDebug("Navigating to Settings Index view.");
         return View("Index");
     }
 
     [HttpPost("Settings/ChangeTheme")]
     public IActionResult ChangeTheme(string themeName)
     {
-        _themeService.SetTheme(themeName);
-        _appDataReader.UpdateInMemory();
+        _appDataReader.UpdateInMemory([(AppDataTarget.Theme, themeName)]);
+        _logger.LogInformation("Application theme successfully updated to: {ThemeName}", themeName);
         return Ok();
     }
 }

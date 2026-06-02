@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Electron/node_modules/**;Test/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Windows VLC -->
+    <None Remove="echonet.db" />
+    <Content Remove="echonet.db" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="libvlc/win-x64/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>

@@ -16,6 +16,7 @@ public class SearchController : Controller
 
     public IActionResult Index()
     {
+        _logger.LogDebug("Navigating to Search Index view.");
         return View("Index");
     }   
 }

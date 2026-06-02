@@ -161,7 +161,7 @@
 .column-headers {
     display: flex;
     align-items: center;
-    padding: 0 22px 10px;
+    padding: 0 18px 10px;
     font-size: 0.67rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -171,12 +171,12 @@
     user-select: none;
 }
 
-.col-index   { width: 56px;  text-align: center; flex-shrink: 0; padding-top: 10px; }
+.col-index   { width: 50px;  text-align: center; flex-shrink: 0; padding-top: 10px; }
 .col-artwork { width: 56px;  text-align: center; flex-shrink: 0; padding-top: 10px; }
-.col-title   { flex: 1; min-width: 0; padding-left: 20px; padding-top: 10px; }
-.col-artist  { width: 22%; flex-shrink: 0; padding-left: 4px; padding-top: 10px; }
-.col-album   { width: 20%; flex-shrink: 0; padding-left: 4px; padding-top: 10px; }
-.col-duration{ width: 80px; text-align: right; flex-shrink: 0; padding-right: 6px; padding-top: 10px; }
+.col-title   { flex: 1; min-width: 0; padding-left: 22px; padding-top: 10px; }
+.col-artist  { width: 22%; flex-shrink: 0; padding-left: 1px; padding-top: 10px; }
+.col-album   { width: 20%; flex-shrink: 0; padding-left: 2px; padding-top: 10px; }
+.col-duration{ width: 80px; text-align: right; flex-shrink: 0; padding-right: 20px; padding-top: 10px; }
 
 /* ── SCROLLABLE SONG LIST ── */
 .songs-table-container {

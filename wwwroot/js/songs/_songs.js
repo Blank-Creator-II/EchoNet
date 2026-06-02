@@ -124,7 +124,7 @@
                 // Notify external handler
                 if (song && typeof songClickHandler === 'function') {
                     songClickHandler(song);
-                    //syncPlayingRow(song);
+                    syncPlayingRow(song);
                 }
             });
         }
@@ -220,7 +220,7 @@
                 var song = songs.filter(function (s) { return String(s.Id) === songId; })[0];
                 if (song && typeof songClickHandler === 'function') {
                     songClickHandler(song);
-                    //syncPlayingRow(song);
+                    syncPlayingRow(song);
                 }
             }
         }
@@ -235,9 +235,8 @@
         var ID = targetData.Id || targetData.id || targetData.detail?.id;
         if (!ID) return;
 
-        // Query over the parent container to clear/set regardless of active view
-        const rows = tableContainer.querySelectorAll('.song-row');
-        rows.forEach(r => r.classList.remove('playing'));
+        // PERFORMANCE FIX: Only target rows currently marked 'playing' instead of scrubbing all of them
+        tableContainer.querySelectorAll('.song-row.playing').forEach(r => r.classList.remove('playing'));
 
         const activeRows = tableContainer.querySelectorAll('.song-row[data-id="' + ID + '"]');
         activeRows.forEach(r => r.classList.add('playing'));

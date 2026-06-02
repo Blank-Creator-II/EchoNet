@@ -16,6 +16,7 @@ public class DiscoverController : Controller
 
     public IActionResult Index()
     {
+        _logger.LogDebug("Navigating to Discover Index view.");
         return View("Index");
     }   
 }

@@ -11,15 +11,15 @@ public class PlayerController : Controller
     private readonly IAudioService _audio;
     private readonly ILibScannerService _libScannerService;
     private readonly AppDataJsonReader _appDataReader;
-    private readonly IThemeService _themeService;
+    private readonly IQueueManagerService _queueManager;
     private readonly ILogger<PlayerController> _logger;
 
-    public PlayerController(IAudioService audio, ILibScannerService libScanner, AppDataJsonReader appDataReader, IThemeService themeService, ILogger<PlayerController> logger)
+    public PlayerController(IAudioService audio, ILibScannerService libScanner, AppDataJsonReader appDataReader, IQueueManagerService queueManager, ILogger<PlayerController> logger)
     {
         _audio = audio;
         _libScannerService = libScanner;
         _appDataReader = appDataReader;
-        _themeService = themeService;
+        _queueManager = queueManager;
         _logger = logger;
     }
 
@@ -28,10 +28,11 @@ public class PlayerController : Controller
     {
         if (_song == null)
         {
+            _logger.LogWarning("Play request failed: Song metadata was null.");
             return NotFound();
         }
         
-        _logger.LogInformation("Play request received with ID: {song.Id}", _song.Id);
+        _logger.LogInformation("Play request received with ID: {SongId}", _song.Id);
 
         _audio.CurrentSongID = _song.Id;
 
@@ -39,14 +40,21 @@ public class PlayerController : Controller
 
         if (string.IsNullOrWhiteSpace(filePath))
         {
-            _logger.LogWarning("Play request failed: path was null or empty");
+            _logger.LogWarning("Play request failed: File path was null or empty for Song ID: {SongId}", _song.Id);
             return BadRequest("No path provided");
         }
 
-        await _audio.LoadAsync(filePath);
-        await _audio.PlayAsync();
-
-        _logger.LogInformation("Now playing: {FilePath}", filePath);
+        try
+        {
+            await _audio.LoadAsync(filePath);
+            await _audio.PlayAsync(_song);
+            _logger.LogInformation("Successfully playing file: {FilePath}", filePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while attempting to load or play file: {FilePath}", filePath);
+            return StatusCode(500, "An error occurred during playback.");
+        }
 
         return Ok(new
         {
@@ -60,21 +68,85 @@ public class PlayerController : Controller
     [HttpPost("Player/TogglePlay")]
     public async Task<IActionResult> TogglePlay()
     {
-        if (_audio.IsPlaying)
+        var playing = _audio.IsPlaying;
+        if (playing)
+        {
             _audio.Pause();
+            playing = false;   
+        }
         else
-           await _audio.PlayAsync();
+        {
+            await _audio.PlayAsync();
+            playing = true;
+        }
+
+        _logger.LogInformation("Playback toggled. IsPlaying: {IsPlaying}", playing);
         
         return Ok(new
         {
-            isPlaying = !_audio.IsPlaying,
+            isPlaying = playing,
             isSeekable = _audio.IsSeekable
         });
+    }
+
+    [HttpPost("Player/Previous")]
+    public async Task<ActionResult> Previous()
+    {
+        _logger.LogInformation("Skipping to previous track.");
+        await _queueManager.PlayPreviousAsync();
+        return Ok();
+    }
+
+    [HttpPost("Player/Next")]
+    public async Task<ActionResult> Next()
+    {
+        _logger.LogInformation("Skipping to next track.");
+        await _queueManager.PlayNextAsync();
+        return Ok();
+    }
+
+    [HttpPost("Player/Loop")]
+    public ActionResult Loop()
+    {
+        PlayerState playerState = _appDataReader.Current.playerState;
+        ChangeState newchangeState;
+
+        int _newState = 0; // 0 = NoLoop, 1 = Loop, 2 = LoopOnce
+
+        if (playerState.changeState == ChangeState.NoLoop)
+        {
+            newchangeState = ChangeState.Loop;
+            _newState = 1;
+        }
+        else if (playerState.changeState == ChangeState.Loop)
+        {
+            newchangeState = ChangeState.LoopOnce;
+            _newState = 2;
+        }
+        else
+        {
+            newchangeState = ChangeState.NoLoop;
+        }
+        
+        PlayerState newPlayerState = new PlayerState
+        {
+            changeState = newchangeState,
+            queueState = playerState.queueState // same state as before
+        };
+        
+        _queueManager.SetPlayerState(newPlayerState);
+        _appDataReader.UpdateInMemory([(AppDataTarget.PlayerState, newPlayerState)]);
+
+        _logger.LogInformation("Loop mode changed from {OldState} to {NewState}", playerState.changeState, newchangeState);
+
+        return Ok(new {newState = _newState});
     }
 
     [HttpGet("Player/Status")]
     public IActionResult Status()
     {
+        _logger.LogDebug("Status polled. Current ID: {SongId}, Time: {CurrentTime}, Duration: {Duration}, IsPlaying: {IsPlaying}, IsSeekable: {IsSeekable}, Volume: {Volume}%", _audio.CurrentSongID, _audio.CurrentTime.TotalSeconds, _audio.Duration.TotalSeconds, _audio.IsPlaying, _audio.IsSeekable, _audio.Volume);
+
         return Json(new
         {
             id = _audio.CurrentSongID,
@@ -89,14 +161,15 @@ public class PlayerController : Controller
     [HttpPost("Player/Seek")]
     public IActionResult Seek([FromBody] SeekRequest request)
     {
+        _logger.LogDebug("Seeking playback to position: {Position} seconds", request.Position);
         _audio.Seek(TimeSpan.FromSeconds(request.Position));
-
         return Ok();
     }
 
     [HttpPost("Player/Volume")]
     public IActionResult Volume([FromBody] VolumeRequest request)
     {
+        _logger.LogDebug("Volume adjustment request received: {Volume}", request.Volume);
         _audio.SetVolume(request.Volume);
         return Ok();
     }
@@ -106,6 +179,7 @@ public class PlayerController : Controller
     {
         if (paths == null || paths.Count == 0)
         {
+            _logger.LogWarning("FolderPicker calling failed: No paths were selected.");
             return BadRequest(new
             {
                 success = false,
@@ -113,16 +187,24 @@ public class PlayerController : Controller
             });
         }
 
+        _logger.LogInformation("Starting library scan for {FolderCount} directories...", paths.Count);
+
         var success = await _libScannerService.ScanFoldersAsync(paths, cancellationToken);
 
         if (!success)
         {
+            _logger.LogWarning("Library scanner returned a failure status for requested paths.");
             return BadRequest(new
             {
                 success = false,
                 message = "Library setup failed."
             });
         }
+
+        await _queueManager.GenerateQueue();
+        _queueManager.SortQueue(_appDataReader.Current.playerState.queueState, _appDataReader.Current.ShuffleSeed);
+
+        _logger.LogInformation("Library scan successfully completed and queue generated.");
 
         return Ok(new
         {
@@ -131,11 +213,48 @@ public class PlayerController : Controller
         });
     }
 
+    [HttpPost("Player/ToggleShuffle")]
+    public ActionResult ToggleShuffle()
+    {
+        PlayerState playerState = _appDataReader.Current.playerState;
+        QueueState newQueueState;
+
+        bool _IsShuffled = true;
+
+        if (playerState.queueState == QueueState.Random)
+        {
+            if (_appDataReader.Current.SortType == "newest") {newQueueState = QueueState.Newest;}
+            else if (_appDataReader.Current.SortType == "oldest") {newQueueState = QueueState.Oldest;}
+            else if (_appDataReader.Current.SortType == "az") {newQueueState = QueueState.AZ;}
+            else {newQueueState = QueueState.ZA;}
+
+            _IsShuffled = false;
+        }
+        else
+        {
+            newQueueState = QueueState.Random;
+        }
+
+        PlayerState newPlayerState = new PlayerState
+        {
+            changeState = playerState.changeState, // same state as before
+            queueState = newQueueState
+        };
+
+        _queueManager.SetPlayerState(newPlayerState);
+        int seed = Random.Shared.Next(int.MinValue, int.MaxValue); // generate seed for shuffling between -2,147,483,648 and 2,147,483,647
+        _queueManager.SortQueue(newQueueState,seed); // Sort queue
+
+        _appDataReader.UpdateInMemory([(AppDataTarget.PlayerState, newPlayerState),(AppDataTarget.ShuffleSeed, seed)]);
+        _logger.LogInformation("Shuffle toggled. Shuffled: {IsShuffled}. Queue State: {QueueState}. Seed assigned: {Seed}", _IsShuffled, newQueueState, seed);
+
+        return Ok(new {IsShuffled = _IsShuffled});
+    }
+
     [HttpPost("Player/SaveState")]
     public ActionResult SaveState([FromBody] SongMetadata song)
     {   
-        _audio.SetSongMetadata(song);
-        _appDataReader.UpdateInMemory();
+        _appDataReader.UpdateInMemory([(AppDataTarget.SongMetadata, song)]);
         return Ok();
     }
 }

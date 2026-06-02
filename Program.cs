@@ -27,13 +27,15 @@ builder.WebHost.UseUrls("http://127.0.0.1:9292");
 builder.Services.AddControllersWithViews();
 // Add SignalR framework services
 builder.Services.AddSignalR();
+// Add app state container for state checking
+builder.Services.AddSingleton<AppStateContainer>();
 // Add background hosted service
-builder.Services.AddHostedService<AudioInitializationService>();
+builder.Services.AddHostedService<AppInitializationService>();
 // Add singleton service
 builder.Services.AddSingleton<IAudioService, VlcAudioService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
+builder.Services.AddSingleton<IQueueManagerService, QueueManagerService>();
 builder.Services.AddSingleton<AppDataJsonReader>();
-builder.Services.AddSingleton<QueueManager>();
 // Add scoped service
 builder.Services.AddScoped<ILibScannerService, LibScannerService>();
 builder.Services.AddScoped<ISongService, SongService>();
@@ -72,16 +74,25 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.MapGet("/ready", () => Results.Ok("READY"));
+// Update the /ready endpoint to inspect the shared state container
+app.MapGet("/ready", (AppStateContainer stateContainer) =>
+{
+    if (stateContainer.IsReady)
+    {
+        return Results.Ok("READY");
+    }
+    
+    // Electron wrapper will see a 503 and keep polling/waiting
+    return Results.StatusCode(StatusCodes.Status503ServiceUnavailable); 
+});
 
-app.MapPost("/shutdown",
+app.MapPost("/shutdown", async
     (IHostApplicationLifetime lifetime, ILogger<Program> logger, IAudioService audio, AppDataJsonReader appDataReader, IThemeService themeService) =>
 {
     try
     {
         appDataReader.UpdateInMemory(); // update memory
-
-        appDataReader.SaveAsync().GetAwaiter().GetResult(); // save memory into disk
+        await appDataReader.SaveAsync(); // save memory into disk
         
         logger.LogInformation("Shutdown save successful.");
     }
@@ -92,7 +103,7 @@ app.MapPost("/shutdown",
 
     logger.LogInformation("Shutdown requested from Electron.");
 
-    Task.Run(async () =>
+    _ = Task.Run(async () =>
     {
         await Task.Delay(100);
         lifetime.StopApplication();

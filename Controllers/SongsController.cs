@@ -9,33 +9,64 @@ namespace EchoNet.Controllers;
 public class SongsController : Controller
 {
     private readonly ILogger<SongsController> _logger;
-    private readonly ISongService _songService;
+    private readonly IQueueManagerService _queueManager;
     private readonly AppDataJsonReader _appDataReader;
 
-    public SongsController(ILogger<SongsController> logger, ISongService songService, AppDataJsonReader appDataReader)
+    public SongsController(ILogger<SongsController> logger, IQueueManagerService queueManager, AppDataJsonReader appDataReader)
     {
         _logger = logger;
-        _songService = songService;
+        _queueManager = queueManager;
         _appDataReader = appDataReader;
     }
 
-    public async Task<IActionResult> Index()
+    public IActionResult Index()
     {
-        var songs = await _songService.GetAllSongsAsync();
-        List<SongMetadata> metadataSongs = new List<SongMetadata>{};
+        List<SongMetadata> metadataSongs = _queueManager.GetQueue();
+        _logger.LogDebug("Loading Songs Index view. Total songs in queue: {SongCount}", metadataSongs?.Count ?? 0);
+        return View(metadataSongs);
+    }
 
-        foreach (Song song in songs)
+    public void ArrangeQueueOrder(string sortType)
+    {
+        PlayerState playerState = _queueManager.GetPlayerState();
+        QueueState newQueueState;
+
+        if (playerState.queueState == QueueState.Random) 
         {
-            metadataSongs.Add(MetadataHelper.ReadSongMetadata(song));
+            _logger.LogInformation("Arrange Queue Order skipped: queue is set to Random (Shuffle is on). Requested sort: {SortType}", sortType);
+            return; // if shuffle is toggled don't update the queue
+        }
+        else if ( playerState.queueState.ToString().ToLower() == sortType)
+        {
+            _logger.LogInformation("Arrange Queue Order skipped: queue is set to same sort order. Requested sort: {SortType} Original sort: {SortType}", sortType, playerState.queueState);
+            return; // if it was the sane sort type don't update
+        }
+        else
+        {
+            if (sortType == "newest") {newQueueState = QueueState.Newest;}
+            else if (sortType == "oldest") {newQueueState = QueueState.Oldest;}
+            else if (sortType == "az") {newQueueState = QueueState.AZ;}
+            else {newQueueState = QueueState.ZA;}
         }
 
-        return View(metadataSongs);
+        PlayerState newPlayerState = new PlayerState
+        {
+            changeState = playerState.changeState, // same change state
+            queueState = newQueueState
+        };
+
+        _queueManager.SetPlayerState(newPlayerState);
+        _queueManager.SortQueue(newQueueState); // sort queue 
+        _appDataReader.UpdateInMemory([(AppDataTarget.PlayerState, newPlayerState)]);
+
+        _logger.LogInformation("Queue rearranged successfully from {OldQueueState} to {NewQueueState}", playerState.queueState, newQueueState);
     }
 
     [HttpPost("Song/SaveState")]
     public ActionResult SaveState([FromBody] SongPageStateRequest request)
     {   
         _appDataReader.UpdateInMemory([(AppDataTarget.ViewType, request.viewType),(AppDataTarget.SortType, request.sortType)]);
+        ArrangeQueueOrder(request.sortType);
         return Ok();
     }
 }

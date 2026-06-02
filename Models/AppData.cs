@@ -10,6 +10,8 @@ public class AppData
     public int Volume { get; set; }
     public string ViewType { get; set; } = "list";
     public string SortType { get; set; } = "az";
+    public PlayerState playerState { get; set; } = new PlayerState{changeState = ChangeState.NoLoop, queueState = QueueState.AZ};
+    public int ShuffleSeed { get; set; } = Random.Shared.Next(int.MinValue, int.MaxValue);
 }
 
 public enum AppDataTarget
@@ -19,5 +21,7 @@ public enum AppDataTarget
     Position,
     Volume,
     ViewType,
-    SortType
+    SortType,
+    PlayerState,
+    ShuffleSeed
 }

@@ -138,9 +138,9 @@ async function createWindow() {
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     async function waitForServer() {
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < 300; i++) { // Timeout updated to 5min
             try {
-                console.log(`[Electron]: Checking server... attempt ${i + 1}/60`);
+                console.log(`[Electron]: Checking server... attempt ${i + 1}/300`);
                 const res = await fetch('http://127.0.0.1:9292/ready');
                 console.log("[Electron]: STATUS:", res.status);
 

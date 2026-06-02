@@ -16,6 +16,7 @@ public class PlaylistsController : Controller
 
     public IActionResult Index()
     {
+        _logger.LogDebug("Navigating to Playlists Index view.");
         return View("Index");
     }   
 }

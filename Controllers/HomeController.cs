@@ -20,7 +20,8 @@ public class HomeController : Controller
     }
 
     public IActionResult Index()
-    {    
+    {   
+        _logger.LogDebug("Navigating to Home Index view.");
         return View("Index");
     }
 

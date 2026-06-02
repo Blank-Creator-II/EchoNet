@@ -8,51 +8,48 @@ public static class MetadataHelper
 {
     public static Song CreateSongFromFilePath(string filePath, Guid musicFolderId)
     {
-        var song = new Track(filePath);
+        // Hit disk once using ATL to extract structural tags
+        var track = new Track(filePath);
         var info = new FileInfo(filePath);
-
-        var cover = GetCoverArt(filePath);
 
         return new Song
         {
             MusicFolderId = musicFolderId,
             FilePath = Path.GetFullPath(filePath),
             FileName = info.Name,
-            Title = string.IsNullOrWhiteSpace(song.Title)
+            Title = string.IsNullOrWhiteSpace(track.Title)
                 ? Path.GetFileNameWithoutExtension(info.Name)
-                : song.Title,
-            Artist = string.IsNullOrWhiteSpace(song.Artist) ? null : song.Artist,
-            Album = string.IsNullOrWhiteSpace(song.Album) ? null : song.Album,
-            Genre = string.IsNullOrWhiteSpace(song.Genre) ? null : song.Genre,
+                : track.Title,
+            Artist = string.IsNullOrWhiteSpace(track.Artist) ? "Unknown Artist" : track.Artist,
+            Album = string.IsNullOrWhiteSpace(track.Album) ? "Unknown Album" : track.Album,
+            Genre = string.IsNullOrWhiteSpace(track.Genre) ? "Unknown Genre" : track.Genre,
             FileSize = info.Length,
             LastModifiedUtc = info.LastWriteTimeUtc,
-            Duration = TimeSpan.FromSeconds(song.Duration),
+            Duration = TimeSpan.FromSeconds(track.Duration),
             CreatedAt = DateTime.UtcNow
         };
     }
 
-    public static SongMetadata ReadSongMetadata(Song _song)
+    public static SongMetadata ReadSongMetadata(Song song)
     {
-        var song = new Track(_song.FilePath);
-        var info = new FileInfo(_song.FilePath);
-        var cover = GetCoverArt(_song.FilePath);
+        // Map values directly from  pre-existing database entity parameters
+        // to avoid costly, repetitive physical disk reads on large collections.
+        var cover = GetCoverArt(song.FilePath);
 
         return new SongMetadata
         {
-            Id = _song.Id,
-            FilePath = Path.GetFullPath(_song.FilePath),
-            FileName = info.Name,
-            Title = string.IsNullOrWhiteSpace(song.Title)
-                ? Path.GetFileNameWithoutExtension(info.Name)
-                : song.Title,
-            Artist = string.IsNullOrWhiteSpace(song.Artist) ? "Unknown Artist" : song.Artist,
-            Album = string.IsNullOrWhiteSpace(song.Album) ? "Unknown Album" : song.Album,
-            Genre = string.IsNullOrWhiteSpace(song.Genre) ? "Unknown Genre" : song.Genre,
-            FileSize = info.Length,
-            LastModifiedUtc = info.LastWriteTimeUtc,
-            Duration = TimeSpan.FromSeconds(song.Duration),
-            FormattedDuration = TimeSpan.FromSeconds(song.Duration).ToString(@"m\:ss"),   // format "3:20"
-            CreatedAt = _song.CreatedAt.ToString("o"), // formated to be specfic to help the sorter
+            Id = song.Id,
+            FilePath = song.FilePath,
+            FileName = song.FileName,
+            Title = song.Title,
+            Artist = song.Artist,
+            Album = song.Album,
+            Genre = song.Genre,
+            FileSize = song.FileSize,
+            LastModifiedUtc = song.LastModifiedUtc,
+            Duration = song.Duration,
+            FormattedDuration = song.Duration.ToString(@"m\:ss"),
+            CreatedAt = song.CreatedAt.ToString("o"),
             CoverArtBytes = cover?.Bytes,
             CoverArtContentType = cover?.ContentType
         };
@@ -60,17 +57,27 @@ public static class MetadataHelper
 
     public static CoverArtResult? GetCoverArt(string filePath)
     {
-        var song = new Track(filePath);
-        var picture = song.EmbeddedPictures.FirstOrDefault();
-
-        if (picture is null || picture.PictureData is null || picture.PictureData.Length == 0)
+        try
         {
+            if (!File.Exists(filePath)) return null;
+
+            var track = new Track(filePath);
+            var picture = track.EmbeddedPictures.FirstOrDefault();
+
+            if (picture is null || picture.PictureData is null || picture.PictureData.Length == 0)
+            {
+                return null;
+            }
+
+            return new CoverArtResult(
+                Bytes: picture.PictureData,
+                ContentType: GuessImageContentType(picture.PictureData));
+        }
+        catch
+        {
+            // Fail silently on disk access/corruption errors to ensure queue mapping stays alive
             return null;
         }
-
-        return new CoverArtResult(
-            Bytes: picture.PictureData,
-            ContentType: GuessImageContentType(picture.PictureData));
     }
 
     private static string GuessImageContentType(byte[] imageBytes)

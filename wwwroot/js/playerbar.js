@@ -75,6 +75,23 @@ audioConnection.on("ReceiveStateChange", (data) => {
     window.__playerStatus.id = data.id;
 
     updatePlayBtnUI(data);
+
+    // Sync tracklist row instantly when playback state registers
+    if (data.id) {
+        window.dispatchEvent(new CustomEvent('playerStatusUpdated', { detail: data }));
+    }
+});
+
+// Handle song change
+audioConnection.on("ReceiveMediaChange", async (data) => {
+    await updateSongInfo(data.song);
+
+    // Force an immediate UI highlight refresh on automated track change
+    if (data.song) {
+        window.dispatchEvent(new CustomEvent('playerStatusUpdated', { 
+            detail: { id: data.song.id || data.song.Id } 
+        }));
+    }
 });
 
 // Start the real-time websocket connection loop
@@ -174,7 +191,7 @@ async function sendSeekPosition(seconds) {
 const volumeSong = document.getElementById('volumeSong');
 const volumeFill = document.getElementById('volumeFill');
 
-let volume = 100;
+let volume = parseFloat(document.getElementById('muteBtn').dataset.volume) || 0;
 
 function setVolumeUI(value) {
 
@@ -287,6 +304,47 @@ function unmutedIconSVG() {
     `;
 }
 
+function shuffleOnIconSVG() {
+    return `
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="var(--accent)">
+            <path d="M120-40q-33 0-56.5-23.5T40-120v-720q0-33 23.5-56.5T120-920h720q33 0 56.5 23.5T920-840v720q0 33-23.5 56.5T840-40H120Zm440-120h240v-240h-80v102L594-424l-57 57 127 127H560v80Zm-344 0 504-504v104h80v-240H560v80h104L160-216l56 56Zm151-377 56-56-207-207-56 56 207 207Z"/>
+        </svg>
+    `;
+}
+
+function shuffleOffIconSVG() {
+    return `
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="var(--button-secondary-text)">
+            <path d="M560-160v-80h104L537-367l57-57 126 126v-102h80v240H560Zm-344 0-56-56 504-504H560v-80h240v240h-80v-104L216-160Zm151-377L160-744l56-56 207 207-56 56Z"/>
+        </svg>
+    `;
+}
+
+function NoLoopIconSVG() {
+    return `
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="var(--button-secondary-text)">
+            <path d="M280-80 120-240l160-160 56 58-62 62h406v-160h80v240H274l62 62-56 58Zm-80-440v-240h486l-62-62 56-58 160 160-160 160-56-58 62-62H280v160h-80Z"/>
+        </svg>
+    `;
+}
+
+function LoopIconSVG() {
+    return `
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="var(--accent)">
+            <path d="M120-40q-33 0-56.5-23.5T40-120v-720q0-33 23.5-56.5T120-920h720q33 0 56.5 23.5T920-840v720q0 33-23.5 56.5T840-40H120Zm160-40 56-58-62-62h486v-240h-80v160H274l62-62-56-58-160 160L280-80Zm-80-440h80v-160h406l-62 62 56 58 160-160-160-160-56 58 62 62H200v240Z"/>
+        </svg>
+    `;
+}
+
+function LoopOnceIconSVG() {
+    return `
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="var(--accent)">
+            <path d="M120-40q-33 0-56.5-23.5T40-120v-720q0-33 23.5-56.5T120-920h720q33 0 56.5 23.5T920-840v720q0 33-23.5 56.5T840-40H120Zm160-40 56-58-62-62h486v-240h-80v160H274l62-62-56-58-160 160L280-80Zm-80-440h80v-160h406l-62 62 56 58 160-160-160-160-56 58 62 62H200v240Zm260 160h60v-240H400v60h60v180Z"/>
+        </svg>
+    `;
+}
+
+
 // Play / Pause
 document.getElementById('playPauseBtn').addEventListener('click', async () => {
     try {
@@ -308,16 +366,90 @@ document.getElementById('playPauseBtn').addEventListener('click', async () => {
     }
 });
 
-async function updatePlayBtnUI(data) {
+function updatePlayBtnUI(data) {
     const playBtn = document.getElementById('playPauseBtn');
 
     if (playBtn) { playBtn.innerHTML = data.isPlaying ? pauseIconSVG() : playIconSVG(); }
 }
 
+// Shuffle
+document.getElementById('shuffleBtn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/Player/ToggleShuffle', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        updateShuffleBtnUI(data);
+
+    } catch (err) {
+        console.error(err);
+    }
+})
+
+function updateShuffleBtnUI(data) {
+    const shuffleBtn = document.getElementById('shuffleBtn');
+
+    if (shuffleBtn) { shuffleBtn.innerHTML = data.isShuffled ? shuffleOnIconSVG() : shuffleOffIconSVG(); }
+}
+
+// Previous
+document.getElementById('previousSongBtn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/Player/Previous', {
+            method: 'POST'
+        });
+
+    } catch (err) {
+        console.error(err);
+    }
+})
+
+// Next
+document.getElementById('nextSongBtn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/Player/Next', {
+            method: 'POST'
+        });
+
+    } catch (err) {
+        console.error(err);
+    }
+})
+
+// Loop
+document.getElementById('loopBtn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/Player/Loop', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        updateLoopBtnUI(data);
+
+    } catch (err) {
+        console.error(err);
+    }
+})
+
+
+function updateLoopBtnUI(data) {
+    const loopBtn = document.getElementById('loopBtn');
+
+    if (loopBtn) {
+        if (data.newState === 0) {loopBtn.innerHTML = NoLoopIconSVG();}
+        else if (data.newState === 1) {loopBtn.innerHTML = LoopIconSVG();}
+        else {loopBtn.innerHTML = LoopOnceIconSVG();}
+    }
+}
+
 // Mute / Unmute
 document.getElementById('muteBtn').addEventListener('click', async () => {
 
-    const newVolume = volume > 0 ? 0 : 100;
+    const isCurrentlyMuted = Number(volume) === 0;
+    const newVolume = isCurrentlyMuted ? 100 : 0;
 
     setVolumeUI(newVolume);
     await sendVolume(newVolume);

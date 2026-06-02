@@ -11,10 +11,11 @@ public class VlcAudioService : IAudioService, IDisposable
     private readonly MediaPlayer _player;
     private readonly ILogger<VlcAudioService> _logger;
     private readonly IHubContext<AudioHub> _hubContext; // Inject SignalR Hub Context
+    private readonly IQueueManagerService _queueManager;
 
     private Media? _currentMedia;
 
-    public Guid? CurrentSongID { get; set; }
+    public Guid CurrentSongID { get; set; }
     private SongMetadata _currentSongMetadata = new SongMetadata{};
 
     public TimeSpan Duration => _player.Length > 0 ? TimeSpan.FromMilliseconds(_player.Length) : TimeSpan.Zero;
@@ -24,10 +25,11 @@ public class VlcAudioService : IAudioService, IDisposable
     public bool IsPlaying => _player.IsPlaying;
     public bool IsSeekable => _player.IsSeekable;
 
-    public VlcAudioService(ILogger<VlcAudioService> logger, IHubContext<AudioHub> hubContext)
+    public VlcAudioService(ILogger<VlcAudioService> logger, IHubContext<AudioHub> hubContext, IQueueManagerService queueManager)
     {
         _logger = logger;
         _hubContext = hubContext;
+        _queueManager = queueManager;
 
         Core.Initialize();
 
@@ -44,7 +46,25 @@ public class VlcAudioService : IAudioService, IDisposable
         _player.Playing += OnPlayerStateChanged;
         _player.Stopped += OnPlayerStateChanged;
 
+        // Bind LibVLC song ending event to Queue Manager
+        _player.EndReached += _queueManager.OnSongEnd;
+
         _logger.LogInformation("VLC Audio Service initialized with SignalR links");
+    }
+
+    private async void OnPlayerMediaChanged(SongMetadata _song)
+    {
+        try
+        {
+            // Broadcast whenever new media get's loaded
+            await _hubContext.Clients.All.SendAsync("ReceiveMediaChange", new{song = _song});
+            _logger.LogDebug("SignalR sent media data, ID: {ID}", _song.Id);            
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send media change update via SignalR.");
+        }
+
     }
 
     private async void OnPlayerTimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
@@ -52,36 +72,49 @@ public class VlcAudioService : IAudioService, IDisposable
         // Don't spam the network infinitely if nothing is playing or length is invalid
         if (_player.Length <= 0) return;
 
-        // Broadcast a status payload down to ALL connected scripts over web sockets instantly
-        await _hubContext.Clients.All.SendAsync("ReceiveStatus", new
+        try
         {
-            id = CurrentSongID,
-            currentTime = TimeSpan.FromMilliseconds(e.Time).TotalSeconds,
-            duration = Duration.TotalSeconds,
-            isPlaying = _player.IsPlaying,
-            isSeekable = _player.IsSeekable,
-            volume = _player.Volume
-        });
-
-        _logger.LogDebug("SignalR sent time data {data}", TimeSpan.FromMilliseconds(e.Time).TotalSeconds);
+            // Broadcast a status payload down to ALL connected scripts over web sockets instantly
+            await _hubContext.Clients.All.SendAsync("ReceiveStatus", new
+            {
+                id = CurrentSongID,
+                currentTime = TimeSpan.FromMilliseconds(e.Time).TotalSeconds,
+                duration = Duration.TotalSeconds,
+                isPlaying = _player.IsPlaying,
+                isSeekable = _player.IsSeekable,
+                volume = _player.Volume
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send player status update via SignalR.");
+        }
     }
 
     private async void OnPlayerStateChanged(object? sender, EventArgs e)
     {
-        // Broadcast whenever state toggles (Play/Pause/Stop)
-        await _hubContext.Clients.All.SendAsync("ReceiveStateChange", new
+        try
         {
-            id = CurrentSongID,
-            isPlaying = _player.IsPlaying,
-            isSeekable = _player.IsSeekable
-        });
+            // Broadcast whenever state toggles (Play/Pause/Stop)
+            await _hubContext.Clients.All.SendAsync("ReceiveStateChange", new
+            {
+                id = CurrentSongID,
+                isPlaying = _player.IsPlaying,
+                isSeekable = _player.IsSeekable
+            });
 
-        _logger.LogDebug("SignalR sent state data {data}", _player.IsPlaying);
+            _logger.LogDebug("SignalR sent state change. IsPlaying: {IsPlaying}", _player.IsPlaying);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send state change update via SignalR.");
+        }
     }
 
     public void SetSongMetadata(SongMetadata song)
     {
         if (_currentSongMetadata == song) {return;}
+        _logger.LogInformation("Stored song metadata with ID: {SongID} Title: {Title}", song.Id, song.Title);
         _currentSongMetadata = song;
     }
 
@@ -110,18 +143,19 @@ public class VlcAudioService : IAudioService, IDisposable
         return Task.CompletedTask;
     }
 
-    public Task PlayAsync()
+    public Task PlayAsync(SongMetadata? song = null)
     {
-        _logger.LogInformation("Play triggered");
+        _logger.LogInformation("Playback play triggered.");
 
         _player.Play();
+        OnPlayerMediaChanged(song == null ? _currentSongMetadata : song);
 
         return Task.CompletedTask;
     }
 
     public void Pause()
     {
-        _logger.LogInformation("Toggling pause");
+        _logger.LogInformation("Playback pause toggled.");
 
         _player.Pause();
     }
@@ -149,6 +183,8 @@ public class VlcAudioService : IAudioService, IDisposable
         _player.Paused -= OnPlayerStateChanged;
         _player.Playing -= OnPlayerStateChanged;
         _player.Stopped -= OnPlayerStateChanged;
+        _player.EndReached -= _queueManager.OnSongEnd;
+        
         _currentMedia?.Dispose();
         _player.Dispose();
         _libVlc.Dispose();

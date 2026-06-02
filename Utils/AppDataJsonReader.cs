@@ -2,6 +2,8 @@ using System.Text.Json;
 using EchoNet.Models;
 using EchoNet.Services;
 using EchoNet.ViewModels;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace EchoNet.Utils;
 
@@ -14,7 +16,6 @@ public class AppDataJsonReader
     private readonly IThemeService _themeService;
     private readonly SemaphoreSlim _fileLock = new(1, 1);
 
-    // "In-Memory" app data for the UI to use
     private AppData _currentData = new();
     public AppData Current => _currentData;
 
@@ -24,7 +25,11 @@ public class AppDataJsonReader
         _audio = audio;
         _themeService = themeService;
         _appDataPath = Path.Combine(env.WebRootPath, "data", "AppData.json");
-        _jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        _jsonOptions = new JsonSerializerOptions 
+        { 
+            WriteIndented = true,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(allowIntegerValues: true) }
+        };
 
         EnsureFileExists();
         InitializeInMemoryData();
@@ -32,13 +37,20 @@ public class AppDataJsonReader
 
     private void EnsureFileExists()
     {
-        var directory = Path.GetDirectoryName(_appDataPath);
-        if (!Directory.Exists(directory)) Directory.CreateDirectory(directory!);
-
-        if (!File.Exists(_appDataPath))
+        try
         {
-            var json = JsonSerializer.Serialize(new AppData(), _jsonOptions);
-            File.WriteAllText(_appDataPath, json);
+            var directory = Path.GetDirectoryName(_appDataPath);
+            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory!);
+
+            if (!File.Exists(_appDataPath))
+            {
+                var json = JsonSerializer.Serialize(new AppData(), _jsonOptions);
+                File.WriteAllText(_appDataPath, json);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to ensure AppData file structure exists.");
         }
     }
 
@@ -47,7 +59,7 @@ public class AppDataJsonReader
         try
         {
             var json = File.ReadAllText(_appDataPath);
-            _currentData = JsonSerializer.Deserialize<AppData>(json) ?? new AppData();
+            _currentData = JsonSerializer.Deserialize<AppData>(json, _jsonOptions) ?? new AppData();
         }
         catch (Exception ex)
         {
@@ -56,19 +68,18 @@ public class AppDataJsonReader
         }
     }
 
-    // Updates the in-memory state without writing on disk.
-    // The function uses 'params' to accept any number of (Target, object) pairs
     public void UpdateInMemory(params (AppDataTarget Target, object DataValue)[] items)
     {
-        // Initialize local variables with fresh data from services
-        var theme = _themeService.GetTheme().Name;
-        var songMetadata = _audio.GetSongMetadata();
-        var position = _audio.CurrentTime;
-        var volume = _audio.Volume;
+        // Default to current states rather than re-querying active services every time
+        var theme = _currentData.Theme;
+        var songMetadata = _currentData.songMetadata;
+        var position = _currentData.Position;
+        var volume = _currentData.Volume;
         var viewType = _currentData.ViewType;
         var sortType = _currentData.SortType;
+        var playerState = _currentData.playerState;
+        var shuffleSeed = _currentData.ShuffleSeed;
 
-        // Override updates based on explicit targets
         foreach (var (target, dataValue) in items)
         {
             switch (target)
@@ -91,6 +102,12 @@ public class AppDataJsonReader
                 case AppDataTarget.SortType when dataValue is string newSortType:
                     sortType = newSortType;
                     break;
+                case AppDataTarget.PlayerState when dataValue is PlayerState newPlayerState:
+                    playerState = newPlayerState;
+                    break;
+                case AppDataTarget.ShuffleSeed when dataValue is int newShuffleSeed:
+                    shuffleSeed = newShuffleSeed;
+                    break;
             }
         }
 
@@ -101,13 +118,16 @@ public class AppDataJsonReader
             Position = position,
             Volume = volume,
             ViewType = viewType,
-            SortType = sortType
+            SortType = sortType,
+            playerState = playerState,
+            ShuffleSeed = shuffleSeed,
         };
         
-        _logger.LogInformation("AppData in memory updated successfully.");
+        _themeService.SetTheme(theme);
+        _audio.SetSongMetadata(songMetadata);
+        _logger.LogDebug("AppData in memory updated successfully.");
     }
 
-    // Saves the current in-memory state (or provided state) to the disk.
     public async Task SaveAsync(AppData? dataToSave = null)
     {
         var data = dataToSave ?? _currentData;
@@ -115,10 +135,16 @@ public class AppDataJsonReader
         await _fileLock.WaitAsync();
         try
         {
-            _currentData = data; 
             var json = JsonSerializer.Serialize(data, _jsonOptions);
             await File.WriteAllTextAsync(_appDataPath, json);
-            _logger.LogInformation("AppData saved to disk.");
+            
+            // Only overwrite local cache once disk operation succeeds
+            _currentData = data; 
+            _logger.LogInformation("AppData saved to disk successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save AppData to disk.");
         }
         finally
         {

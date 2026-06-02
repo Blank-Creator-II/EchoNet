@@ -11,9 +11,9 @@ public class Song
     public string FileName { get; set; } = string.Empty;
 
     public string Title { get; set; } = string.Empty;
-    public string? Artist { get; set; }
-    public string? Album { get; set; }
-    public string? Genre { get; set; }
+    public string Artist { get; set; } = "Unknown Artist";
+    public string Album { get; set; } = "Unknown Album";
+    public string Genre { get; set; } = "Unknown Genre";
 
     public long FileSize { get; set; }
     public DateTime LastModifiedUtc { get; set; }
