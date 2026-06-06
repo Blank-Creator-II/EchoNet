@@ -21,7 +21,7 @@ else
 var builder = WebApplication.CreateBuilder(args);
 
 // Set app port 
-builder.WebHost.UseUrls("http://127.0.0.1:9292");
+builder.WebHost.UseUrls("http://0.0.0.0:9292");
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
