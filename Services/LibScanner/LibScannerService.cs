@@ -17,15 +17,18 @@ public class LibScannerService : ILibScannerService
 
     private readonly AppDbContext _db;
     private readonly ISongService _songService;
+    private readonly MetadataHelper _metadataHelper;
     private readonly ILogger<LibScannerService> _logger;
 
     public LibScannerService(
         AppDbContext db,
         ISongService songService,
-        ILogger<LibScannerService> logger)
+        ILogger<LibScannerService> logger,
+        MetadataHelper metadataHelper)
     {
         _db = db;
         _songService = songService;
+        _metadataHelper = metadataHelper;
         _logger = logger;
     }
 
@@ -108,7 +111,8 @@ public class LibScannerService : ILibScannerService
 
                         try
                         {
-                            var song = MetadataHelper.CreateSongFromFilePath(filePath, folder.Id);
+                            var song = _metadataHelper.CreateSongFromFilePath(filePath, folder.Id);
+                            _metadataHelper.SaveCoverArt(song);
                             songs.Add(song);
                         }
                         catch (Exception ex)

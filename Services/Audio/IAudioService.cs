@@ -1,14 +1,14 @@
-using EchoNet.ViewModels;
+using EchoNet.Models;
 using LibVLCSharp.Shared;
 
 namespace EchoNet.Services;
 
 public interface IAudioService
 {
-    public void SetSongMetadata(SongMetadata song);
-    public SongMetadata GetSongMetadata();
+    public void SetSong(Song song);
+    public Song GetSong();
     Task LoadAsync(string filePath, TimeSpan? startTime = null);
-    Task PlayAsync(SongMetadata? song = null);
+    Task PlayAsync(Song? song = null);
     void Pause();
     void Stop();
     void SetVolume(int volume);

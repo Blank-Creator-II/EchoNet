@@ -24,11 +24,11 @@ public class PlayerController : Controller
     }
 
     [HttpPost("Player/Play")]
-    public async Task<IActionResult> Play([FromBody] SongMetadata _song)
+    public async Task<IActionResult> Play([FromBody] Song _song)
     {
         if (_song == null)
         {
-            _logger.LogWarning("Play request failed: Song metadata was null.");
+            _logger.LogWarning("Play request failed: Song was null.");
             return NotFound();
         }
         
@@ -252,9 +252,9 @@ public class PlayerController : Controller
     }
 
     [HttpPost("Player/SaveState")]
-    public ActionResult SaveState([FromBody] SongMetadata song)
+    public ActionResult SaveState([FromBody] Song song)
     {   
-        _appDataReader.UpdateInMemory([(AppDataTarget.SongMetadata, song)]);
+        _appDataReader.UpdateInMemory([(AppDataTarget.Song, song)]);
         return Ok();
     }
 }

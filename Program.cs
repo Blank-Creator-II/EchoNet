@@ -31,11 +31,15 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<AppStateContainer>();
 // Add background hosted service
 builder.Services.AddHostedService<AppInitializationService>();
+builder.Services.AddHostedService<LanDiscoveryBroadcaster>();
+builder.Services.AddHostedService<LanDiscoveryListener>();
 // Add singleton service
 builder.Services.AddSingleton<IAudioService, VlcAudioService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
 builder.Services.AddSingleton<IQueueManagerService, QueueManagerService>();
 builder.Services.AddSingleton<AppDataJsonReader>();
+builder.Services.AddSingleton<MetadataHelper>();
+builder.Services.AddSingleton<DiscoveredDeviceRegistry>();
 // Add scoped service
 builder.Services.AddScoped<ILibScannerService, LibScannerService>();
 builder.Services.AddScoped<ISongService, SongService>();
@@ -91,7 +95,7 @@ app.MapPost("/shutdown", async
 {
     try
     {
-        appDataReader.UpdateInMemory(); // update memory
+        appDataReader.UpdateInMemory([(AppDataTarget.Volume, audio.Volume),(AppDataTarget.Position, audio.CurrentTime)]); // update audio data in memory since no one sets it
         await appDataReader.SaveAsync(); // save memory into disk
         
         logger.LogInformation("Shutdown save successful.");

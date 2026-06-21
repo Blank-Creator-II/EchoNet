@@ -1,5 +1,5 @@
 using EchoNet.Hubs;
-using EchoNet.ViewModels;
+using EchoNet.Models;
 using LibVLCSharp.Shared;
 using Microsoft.AspNetCore.SignalR;
 
@@ -16,7 +16,7 @@ public class VlcAudioService : IAudioService, IDisposable
     private Media? _currentMedia;
 
     public Guid CurrentSongID { get; set; }
-    private SongMetadata _currentSongMetadata = new SongMetadata{};
+    private Song _currentSong = new Song{};
 
     public TimeSpan Duration => _player.Length > 0 ? TimeSpan.FromMilliseconds(_player.Length) : TimeSpan.Zero;
 
@@ -52,7 +52,7 @@ public class VlcAudioService : IAudioService, IDisposable
         _logger.LogInformation("VLC Audio Service initialized with SignalR links");
     }
 
-    private async void OnPlayerMediaChanged(SongMetadata _song)
+    private async void OnPlayerMediaChanged(Song _song)
     {
         try
         {
@@ -111,16 +111,16 @@ public class VlcAudioService : IAudioService, IDisposable
         }
     }
 
-    public void SetSongMetadata(SongMetadata song)
+    public void SetSong(Song song)
     {
-        if (_currentSongMetadata == song) {return;}
+        if (_currentSong == song) {return;}
         _logger.LogInformation("Stored song metadata with ID: {SongID} Title: {Title}", song.Id, song.Title);
-        _currentSongMetadata = song;
+        _currentSong = song;
     }
 
-    public SongMetadata GetSongMetadata()
+    public Song GetSong()
     {
-        return _currentSongMetadata;
+        return _currentSong;
     }
 
     public Task LoadAsync(string filePath, TimeSpan? startTime = null)
@@ -143,12 +143,12 @@ public class VlcAudioService : IAudioService, IDisposable
         return Task.CompletedTask;
     }
 
-    public Task PlayAsync(SongMetadata? song = null)
+    public Task PlayAsync(Song? song = null)
     {
         _logger.LogInformation("Playback play triggered.");
 
         _player.Play();
-        OnPlayerMediaChanged(song == null ? _currentSongMetadata : song);
+        OnPlayerMediaChanged(song == null ? _currentSong : song);
 
         return Task.CompletedTask;
     }

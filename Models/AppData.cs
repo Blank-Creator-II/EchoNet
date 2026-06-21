@@ -5,7 +5,7 @@ namespace EchoNet.Models;
 public class AppData
 {
     public string Theme { get; set; } = "Crimson Shadow";
-    public SongMetadata songMetadata { get; set; } = new SongMetadata{};
+    public Song song { get; set; } = new Song{};
     public TimeSpan Position { get; set; }
     public int Volume { get; set; }
     public string ViewType { get; set; } = "list";
@@ -17,7 +17,7 @@ public class AppData
 public enum AppDataTarget
 {
     Theme,
-    SongMetadata,
+    Song,
     Position,
     Volume,
     ViewType,

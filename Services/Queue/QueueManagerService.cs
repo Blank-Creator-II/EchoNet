@@ -15,7 +15,7 @@ public class QueueManagerService : IQueueManagerService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<QueueManagerService> _logger;
 
-    private Dictionary<Guid, SongMetadata> LookUpIndex = new Dictionary<Guid, SongMetadata>();
+    private Dictionary<Guid, Song> LookUpIndex = new Dictionary<Guid, Song>();
     private List<Guid> _Queue = new List<Guid>();
 
     private PlayerState playerState { get; set; }
@@ -37,7 +37,7 @@ public class QueueManagerService : IQueueManagerService
         playerState = _playerState; 
     }
 
-    private SongMetadata? FindSongById(Guid id)
+    public Song? FindSongByIdFromQueue(Guid id)
     {
         return LookUpIndex.TryGetValue(id, out var song) ? song : null;
     }
@@ -57,7 +57,7 @@ public class QueueManagerService : IQueueManagerService
             LookUpIndex.Clear();
             foreach (Song song in songs)
             {
-                LookUpIndex[song.Id] = MetadataHelper.ReadSongMetadata(song);
+                LookUpIndex[song.Id] = song;
             }
             
             _Queue = LookUpIndex.Keys.ToList();
@@ -72,14 +72,14 @@ public class QueueManagerService : IQueueManagerService
         return true;
     }
 
-    public List<SongMetadata> GetQueue()
+    public List<Song> GetQueue()
     {
-        return LookUpIndex.Values.ToList();
+        return _Queue.Where(id => LookUpIndex.ContainsKey(id)).Select(id => LookUpIndex[id]).ToList();
     }
 
     public void SortQueue(QueueState orderMethod, int? seed = null)
     {
-        List<SongMetadata> orderedList = LookUpIndex.Values.ToList();
+        List<Song> orderedList = LookUpIndex.Values.ToList();
         
         _logger.LogDebug("Sorting queue. SortMethod: {OrderMethod}, HasSeed: {HasSeed}", orderMethod, seed.HasValue);
 
@@ -92,7 +92,7 @@ public class QueueManagerService : IQueueManagerService
                 {
                     n--;
                     int k = ran.Next(n + 1);
-                    SongMetadata value = orderedList[k];
+                    Song value = orderedList[k];
                     orderedList[k] = orderedList[n];
                     orderedList[n] = value;
                 }
@@ -190,7 +190,7 @@ public class QueueManagerService : IQueueManagerService
             }
             
             Guid nextSongId = _Queue[targetIndex];
-            SongMetadata? nextSong = FindSongById(nextSongId);
+            Song? nextSong = FindSongByIdFromQueue(nextSongId);
 
             if (nextSong != null)
             {

@@ -72,7 +72,7 @@ public class AppDataJsonReader
     {
         // Default to current states rather than re-querying active services every time
         var theme = _currentData.Theme;
-        var songMetadata = _currentData.songMetadata;
+        var _song = _currentData.song;
         var position = _currentData.Position;
         var volume = _currentData.Volume;
         var viewType = _currentData.ViewType;
@@ -87,8 +87,8 @@ public class AppDataJsonReader
                 case AppDataTarget.Theme when dataValue is string newTheme:
                     theme = newTheme;
                     break;
-                case AppDataTarget.SongMetadata when dataValue is SongMetadata newMetadata:
-                    songMetadata = newMetadata;
+                case AppDataTarget.Song when dataValue is Song newSong:
+                    _song = newSong;
                     break;
                 case AppDataTarget.Position when dataValue is TimeSpan newPosition:
                     position = newPosition;
@@ -114,7 +114,7 @@ public class AppDataJsonReader
         _currentData = new AppData 
         {
             Theme = theme,
-            songMetadata = songMetadata,
+            song = _song,
             Position = position,
             Volume = volume,
             ViewType = viewType,
@@ -124,7 +124,7 @@ public class AppDataJsonReader
         };
         
         _themeService.SetTheme(theme);
-        _audio.SetSongMetadata(songMetadata);
+        _audio.SetSong(_song);
         _logger.LogDebug("AppData in memory updated successfully.");
     }
 

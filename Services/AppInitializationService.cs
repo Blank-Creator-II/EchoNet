@@ -38,7 +38,7 @@ public class AppInitializationService : IHostedService
             _themeService.SetTheme(_appDataReader.Current.Theme);
 
             _logger.LogInformation("Running background VLC configuration");
-            var song = _appDataReader.Current.songMetadata;
+            var song = _appDataReader.Current.song;
             var songPath = song.FilePath;
             var position = _appDataReader.Current.Position;
             var volume = _appDataReader.Current.Volume;
@@ -51,7 +51,7 @@ public class AppInitializationService : IHostedService
                 _logger.LogInformation("Restoring previous playback session. SongId: {SongId}, Position: {Position}s, Volume: {Volume}%", songId, position, volume);
                 
                 await _audio.LoadAsync(songPath, position);
-                _audio.SetSongMetadata(song);
+                _audio.SetSong(song);
                 _audio.CurrentSongID = songId;
                 _audio.SetVolume(volume);
             }
@@ -63,8 +63,10 @@ public class AppInitializationService : IHostedService
             _logger.LogInformation("Running background Queue Manager configuration with state: Sort By {QueueState} (Seed: {Seed})", playerState.queueState, seed);
 
             _queueManager.SetPlayerState(playerState);
-            _queueManager.SortQueue(playerState.queueState, seed);
+            // fetch and build the collection baseline first
             await _queueManager.GenerateQueue();
+            // now sort or seed-shuffle the freshly loaded items
+            _queueManager.SortQueue(playerState.queueState, seed);
 
             // -- loading finished! Mark as ready --
             _logger.LogInformation("Previous session successfully restored.");

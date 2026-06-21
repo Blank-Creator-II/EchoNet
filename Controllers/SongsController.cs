@@ -21,9 +21,9 @@ public class SongsController : Controller
 
     public IActionResult Index()
     {
-        List<SongMetadata> metadataSongs = _queueManager.GetQueue();
-        _logger.LogDebug("Loading Songs Index view. Total songs in queue: {SongCount}", metadataSongs?.Count ?? 0);
-        return View(metadataSongs);
+        List<Song> songs = _queueManager.GetQueue();
+        _logger.LogDebug("Loading Songs Index view. Total songs in queue: {SongCount}", songs?.Count ?? 0);
+        return View(songs);
     }
 
     public void ArrangeQueueOrder(string sortType)

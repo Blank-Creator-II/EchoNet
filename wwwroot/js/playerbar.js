@@ -485,9 +485,9 @@ async function updateSongInfo(song) {
 
     if (coverArtContainer) {
         // If cover art exists and isn't just an empty string/null
-        if (song.coverArtDataUri && song.coverArtDataUri.trim() !== "") {
+        if (song.hasCoverArt) {
             coverArtContainer.innerHTML = `
-                <img class="song-thumb" src="${song.coverArtDataUri}" alt="" loading="lazy" />
+                <img class="song-thumb" src="${song.coverArtDirectory}_256.jpg" alt="" loading="lazy" />
             `;
         } else {
             // Fallback placeholder directly if no string data is returned

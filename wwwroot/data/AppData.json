@@ -1,29 +1,29 @@
 {
-  "Theme": "Aqua Depths",
-  "songMetadata": {
-    "Id": "00000000-0000-0000-0000-000000000000",
+  "Theme": "Purple Haze",
+  "song": {
+    "Id": "255ac27d-4224-4cf2-adec-27de78026e1d",
+    "MusicFolderId": "00000000-0000-0000-0000-000000000000",
+    "MusicFolder": null,
     "FilePath": "",
     "FileName": "",
-    "Title": "No Song Selected",
+    "Title": "Unknown Title",
     "Artist": "Unknown Artist",
     "Album": "Unknown Album",
     "Genre": "Unknown Genre",
     "FileSize": 0,
     "LastModifiedUtc": "0001-01-01T00:00:00",
     "Duration": "00:00:00",
-    "FormattedDuration": null,
-    "CreatedAt": null,
-    "CoverArtBytes": null,
-    "CoverArtContentType": null,
-    "CoverArtDataUri": null
+    "CreatedAt": "2026-06-21T20:43:17.3161489Z",
+    "HasCoverArt": false,
+    "CoverArtDirectory": "/data/cover/255ac27d-4224-4cf2-adec-27de78026e1d"
   },
   "Position": "00:00:00",
-  "Volume": 0,
+  "Volume": 100,
   "ViewType": "list",
   "SortType": "az",
   "playerState": {
     "changeState": "NoLoop",
     "queueState": "AZ"
   },
-  "ShuffleSeed": 62604289
+  "ShuffleSeed": 738032724
 }
