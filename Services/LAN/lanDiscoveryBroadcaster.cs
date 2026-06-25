@@ -7,18 +7,20 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using EchoNet.Models;
+using EchoNet.Utils;
 
 namespace EchoNet.Services;
 
 public class LanDiscoveryBroadcaster : BackgroundService
 {
     private readonly ILogger<LanDiscoveryBroadcaster> _logger;
+    private readonly AppDataJsonReader _appDataReader;
     private readonly int _broadcastPort = 18345; // The port listeners are camping on
-    private readonly int _webAppPort = 9292;     // app's HTTP port
 
-    public LanDiscoveryBroadcaster(ILogger<LanDiscoveryBroadcaster> logger)
+    public LanDiscoveryBroadcaster(ILogger<LanDiscoveryBroadcaster> logger, AppDataJsonReader appDataReader)
     {
         _logger = logger;
+        _appDataReader = appDataReader;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,16 +34,17 @@ public class LanDiscoveryBroadcaster : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             try
-            {
-                string? localIp = GetLocalIPAddress();
+            {            
+                string? localIp = LANHelper.GetLocalIPAddress();
                 
                 if (!string.IsNullOrEmpty(localIp))
                 {
                     // Construct the payload
                     var payload = new DiscoveryPayload
                     {
+                        HostId = _appDataReader.Current.AppId,
                         DeviceName = Environment.MachineName,
-                        ApiBaseUrl = $"http://{localIp}:{_webAppPort}/api/music"
+                        Ip = localIp
                     };
 
                     string jsonPayload = JsonSerializer.Serialize(payload);
@@ -60,23 +63,5 @@ public class LanDiscoveryBroadcaster : BackgroundService
         }
 
         _logger.LogInformation("LAN Discovery Broadcaster Service is stopping.");
-    }
-
-    // Helper to get the actual local network IP (skipping loopbacks and virtual adapters)
-    private string? GetLocalIPAddress()
-    {
-        var host = Dns.GetHostEntry(Dns.GetHostName());
-        foreach (var ip in host.AddressList)
-        {
-            if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
-            {
-                // Simple heuristic to avoid common virtual adapters if any exist
-                if (!ip.ToString().StartsWith("169.254")) 
-                {
-                    return ip.ToString();
-                }
-            }
-        }
-        return null;
     }
 }

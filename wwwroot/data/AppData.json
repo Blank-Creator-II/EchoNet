@@ -1,7 +1,8 @@
 {
-  "Theme": "Purple Haze",
+  "AppId": "dcd603d8-b4b3-44c8-9d32-00e46dde31df",
+  "Theme": "Crimson Shadow",
   "song": {
-    "Id": "255ac27d-4224-4cf2-adec-27de78026e1d",
+    "Id": "00b85810-08da-4ab3-921f-cb3f182e5822",
     "MusicFolderId": "00000000-0000-0000-0000-000000000000",
     "MusicFolder": null,
     "FilePath": "",
@@ -13,9 +14,12 @@
     "FileSize": 0,
     "LastModifiedUtc": "0001-01-01T00:00:00",
     "Duration": "00:00:00",
-    "CreatedAt": "2026-06-21T20:43:17.3161489Z",
+    "CreatedAt": "2026-06-25T07:47:43.1266967Z",
     "HasCoverArt": false,
-    "CoverArtDirectory": "/data/cover/255ac27d-4224-4cf2-adec-27de78026e1d"
+    "CoverArtDirectory": "/data/cover/00b85810-08da-4ab3-921f-cb3f182e5822",
+    "FormattedDuration": "0:00",
+    "FormattedCreatedAt": "2026-06-25T07:47:43.1266967Z",
+    "IsLocal": true
   },
   "Position": "00:00:00",
   "Volume": 100,
@@ -25,5 +29,5 @@
     "changeState": "NoLoop",
     "queueState": "AZ"
   },
-  "ShuffleSeed": 738032724
+  "ShuffleSeed": 1437127771
 }

@@ -16,6 +16,7 @@ public class VlcAudioService : IAudioService, IDisposable
     private Media? _currentMedia;
 
     public Guid CurrentSongID { get; set; }
+    public bool IsPlayingLocalSong => _currentSong.IsLocal;
     private Song _currentSong = new Song{};
 
     public TimeSpan Duration => _player.Length > 0 ? TimeSpan.FromMilliseconds(_player.Length) : TimeSpan.Zero;
@@ -48,6 +49,9 @@ public class VlcAudioService : IAudioService, IDisposable
 
         // Bind LibVLC song ending event to Queue Manager
         _player.EndReached += _queueManager.OnSongEnd;
+
+        // Bind LibVLC playback errors to Queue Manager
+        _player.EncounteredError += _queueManager.OnSongError;
 
         _logger.LogInformation("VLC Audio Service initialized with SignalR links");
     }
@@ -129,17 +133,50 @@ public class VlcAudioService : IAudioService, IDisposable
 
         _currentMedia?.Dispose();
 
-        _currentMedia = new Media(_libVlc, filePath, FromType.FromPath);
-
-        // If we have a start time, add it as a media option (in seconds)
-        if (startTime.HasValue && startTime.Value.TotalSeconds > 0)
+        try
         {
-            var seconds = (int)startTime.Value.TotalSeconds;
-            _currentMedia.AddOption($":start-time={seconds}");
+            _currentMedia = new Media(_libVlc, filePath, FromType.FromPath);
+
+            // If we have a start time, add it as a media option (in seconds)
+            if (startTime.HasValue && startTime.Value.TotalSeconds > 0)
+            {
+                var seconds = (int)startTime.Value.TotalSeconds;
+                _currentMedia.AddOption($":start-time={seconds}");
+            }
+
+            _player.Media = _currentMedia;
+        }
+        catch
+        {
+            throw new FileNotFoundException();
         }
 
-        _player.Media = _currentMedia;
+        return Task.CompletedTask;
+    }
 
+    public Task LoadRemoteAsync(string streamUrl, TimeSpan? startTime = null)
+    {
+        _logger.LogInformation("Loading remote stream: {StreamUrl}", streamUrl);
+
+        _currentMedia?.Dispose();
+
+        try
+        {
+            _currentMedia = new Media(_libVlc, streamUrl, FromType.FromLocation);
+
+            if (startTime.HasValue && startTime.Value.TotalSeconds > 0)
+            {
+                var seconds = (int)startTime.Value.TotalSeconds;
+                _currentMedia.AddOption($":start-time={seconds}");
+            }
+
+            _player.Media = _currentMedia;
+        }
+        catch
+        {
+            throw new FileNotFoundException();
+        }
+        
         return Task.CompletedTask;
     }
 
@@ -184,6 +221,7 @@ public class VlcAudioService : IAudioService, IDisposable
         _player.Playing -= OnPlayerStateChanged;
         _player.Stopped -= OnPlayerStateChanged;
         _player.EndReached -= _queueManager.OnSongEnd;
+        _player.EncounteredError -= _queueManager.OnSongError;
         
         _currentMedia?.Dispose();
         _player.Dispose();

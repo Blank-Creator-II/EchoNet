@@ -1,0 +1,83 @@
+@inject EchoNet.Utils.AppDataJsonReader AppDataJsonReader
+@{AppData? appData = AppDataJsonReader.Current;}
+
+<div class="remote-song-panel">
+    <div class="header" id="header">
+        <div class="header-nav">
+            <div class="header-left">
+                <h1 class="header-title">Songs</h1>
+                <span class="song-count" id="songCountDisplay">0 songs</span>
+            </div>
+            <div class="header-right">
+                <span class="sort-label">Sort</span>
+                <div class="sort-group" id="sortGroup">
+                    <button class="sort-btn @(appData.SortType == "newest" ? "active" : string.Empty)" data-sort="newest">Newest</button>
+                    <button class="sort-btn @(appData.SortType == "oldest" ? "active" : string.Empty)" data-sort="oldest">Oldest</button>
+                    <button class="sort-btn @(appData.SortType == "az" ? "active" : string.Empty)" data-sort="az">A – Z</button>
+                    <button class="sort-btn @(appData.SortType == "za" ? "active" : string.Empty)" data-sort="za">Z – A</button>
+                </div>
+                <div class="header-extra">
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn @(appData.ViewType == "list" ? "active-view" : string.Empty)" data-view="list" title="List view">☰</button>
+                        <button class="view-toggle-btn @(appData.ViewType == "grid" ? "active-view" : string.Empty)" data-view="grid" title="Grid view">⊞</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="column-headers" id="columnHeaders">
+            <div class="col-index">#</div>
+            <div class="col-artwork"></div>
+            <div class="col-title">Title</div>
+            <div class="col-artist">Artist</div>
+            <div class="col-album">Album</div>
+            <div class="col-duration">Time</div>
+        </div>
+    </div>
+
+    <div class="songs-table-container" id="tableContainer">
+        <table class="songs-table" id="songsTable">
+            <colgroup>
+                <col class="col-index">
+                <col class="col-artwork">
+                <col class="col-title">
+                <col class="col-artist">
+                <col class="col-album">
+                <col class="col-duration">
+            </colgroup>
+            <tbody id="songsTbody"></tbody>
+        </table>
+        
+        <div class="songs-grid" id="songsGrid" style="display: none;"></div>
+
+        <div class="empty-state" id="emptyState">No songs found.</div>
+    </div>
+</div>
+
+<script>
+    // Inject state data directly from stored AppData
+    window.__remoteSongPageState = ["@appData.ViewType","@appData.SortType"];
+    // define a custom action when a song row is clicked
+    window.__remoteSongClickHandler = async function(_song,_songs) {
+        try {
+            const response = await fetch('/Player/PlayRemote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    songDTO: _song,
+                    songDTOs: _songs
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Play failed');
+                return;
+            }
+
+        } catch (err) {
+            console.error(err);
+        }
+    };
+</script>

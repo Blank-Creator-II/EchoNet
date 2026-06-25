@@ -17,7 +17,8 @@
         <div class="song-thumb-container" id="playerSongThumb">
             @if (appData.song.HasCoverArt)
             {
-                <img class="song-thumb" src="@(appData.song.CoverArtDirectory+"_256.jpg")" alt="" loading="lazy" />
+                string coverUrl = appData.song.IsLocal ? $"{appData.song.CoverArtDirectory}_256.jpg" : $"{appData.song.FilePath}/coverArt/{appData.song.Id}/256";
+                <img class="song-thumb" src="@coverUrl" alt="" loading="lazy" />
             }
             else
             {

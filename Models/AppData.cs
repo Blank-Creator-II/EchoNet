@@ -4,6 +4,7 @@ namespace EchoNet.Models;
 
 public class AppData
 {
+    public Guid AppId { get; set; } = Guid.NewGuid();
     public string Theme { get; set; } = "Crimson Shadow";
     public Song song { get; set; } = new Song{};
     public TimeSpan Position { get; set; }

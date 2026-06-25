@@ -29,3 +29,8 @@ public enum PlaybackDirection
     AutoEvent // Specific to LibVLC's EndReached event
 }
 
+public enum QueueType
+{
+    Local,
+    Remote
+}

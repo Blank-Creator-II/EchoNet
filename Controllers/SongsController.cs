@@ -21,7 +21,7 @@ public class SongsController : Controller
 
     public IActionResult Index()
     {
-        List<Song> songs = _queueManager.GetQueue();
+        List<Song> songs = _queueManager.GetQueue(QueueType.Local);
         _logger.LogDebug("Loading Songs Index view. Total songs in queue: {SongCount}", songs?.Count ?? 0);
         return View(songs);
     }
@@ -39,7 +39,7 @@ public class SongsController : Controller
         else if ( playerState.queueState.ToString().ToLower() == sortType)
         {
             _logger.LogInformation("Arrange Queue Order skipped: queue is set to same sort order. Requested sort: {SortType} Original sort: {SortType}", sortType, playerState.queueState);
-            return; // if it was the sane sort type don't update
+            return; // if it was the same sort type don't update
         }
         else
         {
@@ -56,7 +56,8 @@ public class SongsController : Controller
         };
 
         _queueManager.SetPlayerState(newPlayerState);
-        _queueManager.SortQueue(newQueueState); // sort queue 
+        _queueManager.SortQueue(QueueType.Local, newQueueState); // sort local queue
+        _queueManager.SortQueue(QueueType.Remote, newQueueState); // sort remote queue 
         _appDataReader.UpdateInMemory([(AppDataTarget.PlayerState, newPlayerState)]);
 
         _logger.LogInformation("Queue rearranged successfully from {OldQueueState} to {NewQueueState}", playerState.queueState, newQueueState);

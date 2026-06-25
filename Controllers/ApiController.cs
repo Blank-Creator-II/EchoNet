@@ -1,5 +1,6 @@
 using EchoNet.Services;
 using EchoNet.Models;
+using EchoNet.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EchoNet.Controllers;
@@ -23,19 +24,24 @@ public class ApiController : ControllerBase
     [HttpGet("songs")]
     public IActionResult GetSongs()
     {
-        _logger.LogInformation("LAN device requested the song list.");
+        _logger.LogDebug("LAN device requested the song list.");
         
         string baseUrl = $"{Request.Scheme}://{Request.Host}";
-        var rawQueue = _queueManager.GetQueue();
+        var rawQueue = _queueManager.GetQueue(QueueType.Local);
 
         // Map internal Song models to a DTO so the receiver gets absolute network URLs
-        var networkQueue = rawQueue.Select(song => new 
+        var networkQueue = rawQueue.Select(song => new SongDTO
         {
             Id = song.Id,
             Title = song.Title,
             Artist = song.Artist,
+            Album = song.Album,
             Duration = song.Duration,
-            HasCoverArt = song.HasCoverArt
+            CreatedAt = song.CreatedAt,
+            FormattedDuration = song.FormattedDuration,
+            FormattedCreatedAt = song.FormattedCreatedAt,
+            HasCoverArt = song.HasCoverArt,
+            HostUrl = $"{baseUrl}/api/music"
         });
 
         return Ok(networkQueue);
@@ -45,10 +51,10 @@ public class ApiController : ControllerBase
     [HttpGet("stream/{id:guid}")]
     public IActionResult StreamSong(Guid id)
     {
-        _logger.LogInformation("Streaming request received for song ID: {SongID}", id);
+        _logger.LogDebug("Streaming request received for song ID: {SongID}", id);
         
         // Map the ID to a real file path on the host system
-        Song? song = _queueManager.FindSongByIdFromQueue(id); 
+        Song? song = _queueManager.FindSongByIdFromQueue(id, QueueType.Local); 
 
         if (song is null)
         {
@@ -67,10 +73,10 @@ public class ApiController : ControllerBase
     [HttpGet("coverArt/{id:guid}/{size:int}")]
     public IActionResult StreamCoverArt(Guid id, int size)
     {
-        _logger.LogInformation("CoverArt request received for song ID: {SongID}", id);
+        _logger.LogDebug("CoverArt request received for song ID: {SongID}", id);
 
         // Map the ID to a real file path on the host system
-        Song? song = _queueManager.FindSongByIdFromQueue(id); 
+        Song? song = _queueManager.FindSongByIdFromQueue(id,QueueType.Local); 
 
         if (song is null)
         {

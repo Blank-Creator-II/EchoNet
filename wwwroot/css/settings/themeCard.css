@@ -20,9 +20,9 @@
 .canvas-wrapper:hover {
   transform: translateY(-4px);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 8px 24px rgba(0, 0, 0, 0.35),
-    0 0 40px 6px var(--glow-color, rgba(255, 255, 255, 0.15));
+    0 0 0 1px color-mix(in srgb, var(--glow-color) 40%, transparent), /* Layer 1: border ring */
+    0 8px 24px color-mix(in srgb, var(--glow-color) 25%, transparent), /* Layer 2: drop shadow */
+    0 0 40px 6px color-mix(in srgb, var(--glow-color) 45%, transparent); /* Layer 3: diffuse glow */
 }
 
 canvas.fc {

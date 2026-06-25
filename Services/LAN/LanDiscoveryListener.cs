@@ -3,18 +3,21 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using EchoNet.Models;
+using EchoNet.Utils;
 
 namespace EchoNet.Services;
 
 public class LanDiscoveryListener : BackgroundService
 {
     private readonly ILogger<LanDiscoveryListener> _logger;
+    private readonly AppDataJsonReader _appDataReader;
     private readonly DiscoveredDeviceRegistry _discoveredDevice;
     private readonly int _listenPort = 18345;
 
-    public LanDiscoveryListener(ILogger<LanDiscoveryListener> logger, DiscoveredDeviceRegistry discoveredDevice)
+    public LanDiscoveryListener(ILogger<LanDiscoveryListener> logger, AppDataJsonReader appDataReader, DiscoveredDeviceRegistry discoveredDevice)
     {
         _logger = logger;
+        _appDataReader = appDataReader;
         _discoveredDevice = discoveredDevice;
     }
 
@@ -36,6 +39,7 @@ public class LanDiscoveryListener : BackgroundService
                 var payload = JsonSerializer.Deserialize<DiscoveryPayload>(jsonString);
                 if (payload != null)
                 {
+                    if (payload.HostId == _appDataReader.Current.AppId) {payload.DeviceName = "Local Songs";}
                     _discoveredDevice.UpdateDevice(payload);
                 }
             }

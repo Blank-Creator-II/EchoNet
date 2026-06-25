@@ -55,9 +55,9 @@
     <div class="theme-grid">
       @foreach (Theme t in themes)
       {
-          <partial name="themeCard" model="t"/>
+          <partial name="themeCard" model="@(t,theme)"/>
       }
     </div>
-
+    <script src="~/js/settings/themeCard.js"></script>
     <script src="~/js/settings/themeSwitcher.js"></script>
 </aside>

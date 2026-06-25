@@ -15,10 +15,13 @@ public class QueueManagerService : IQueueManagerService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<QueueManagerService> _logger;
 
-    private Dictionary<Guid, Song> LookUpIndex = new Dictionary<Guid, Song>();
-    private List<Guid> _Queue = new List<Guid>();
+    private Dictionary<Guid, Song> localLookUpIndex = new Dictionary<Guid, Song>();
+    private Dictionary<Guid, Song> remoteLookUpIndex = new Dictionary<Guid, Song>();
+    private List<Guid> localQueue = new List<Guid>();
+    private List<Guid> remoteQueue = new List<Guid>();
 
     private PlayerState playerState { get; set; }
+    private PlaybackDirection _lastDirection = PlaybackDirection.Forward;
 
     public QueueManagerService(IServiceProvider serviceProvider, ILogger<QueueManagerService> logger)
     {
@@ -37,32 +40,52 @@ public class QueueManagerService : IQueueManagerService
         playerState = _playerState; 
     }
 
-    public Song? FindSongByIdFromQueue(Guid id)
+    public Song? FindSongByIdFromQueue(Guid id, QueueType type)
     {
-        return LookUpIndex.TryGetValue(id, out var song) ? song : null;
+        if (type == QueueType.Local) {return localLookUpIndex.TryGetValue(id, out var song) ? song : null;}
+        else {return remoteLookUpIndex.TryGetValue(id, out var song) ? song : null;}
     }
 
-    public async Task<bool> GenerateQueue()
+    public async Task<bool> GenerateQueue(QueueType type, List<Song>? songs = null)
     {
-        _logger.LogInformation("Generating playback queue from song service.");
+        _logger.LogInformation("Generating playback [{QueueType}] queue from song service.", type);
         try
         {
-            List<Song> songs;
-            using (var scope = _serviceProvider.CreateScope())
+            if (type == QueueType.Local)
             {
-                var songService = scope.ServiceProvider.GetRequiredService<ISongService>();
-                songs = await songService.GetAllSongsAsync();
-            }
+                using (var scope = _serviceProvider.CreateScope())
+                {
+                    var songService = scope.ServiceProvider.GetRequiredService<ISongService>();
+                    songs = await songService.GetAllSongsAsync();
+                }
 
-            LookUpIndex.Clear();
-            foreach (Song song in songs)
-            {
-                LookUpIndex[song.Id] = song;
+                localLookUpIndex.Clear();
+                foreach (Song song in songs)
+                {
+                    localLookUpIndex[song.Id] = song;
+                }
+                
+                localQueue = localLookUpIndex.Keys.ToList();
+                
+                _logger.LogInformation("Successfully generated [Local] queue. Total items: {Count}", localQueue.Count);   
             }
-            
-            _Queue = LookUpIndex.Keys.ToList();
-            
-            _logger.LogInformation("Successfully generated queue. Total items: {Count}", _Queue.Count);
+            else if (songs is not null)
+            {
+                remoteLookUpIndex.Clear();
+                foreach (Song song in songs)
+                {
+                    remoteLookUpIndex[song.Id] = song;
+                }
+                
+                remoteQueue = remoteLookUpIndex.Keys.ToList();
+                
+                _logger.LogInformation("Successfully generated [Remote] queue. Total items: {Count}", remoteQueue.Count);
+            }
+            else
+            {
+                _logger.LogError("Failed to generate queue: Incorrect queue type requested");
+                return false;
+            }
         }
         catch (System.Exception ex)
         {
@@ -72,16 +95,17 @@ public class QueueManagerService : IQueueManagerService
         return true;
     }
 
-    public List<Song> GetQueue()
+    public List<Song> GetQueue(QueueType type)
     {
-        return _Queue.Where(id => LookUpIndex.ContainsKey(id)).Select(id => LookUpIndex[id]).ToList();
+        if (type == QueueType.Local) {return localQueue.Where(id => localLookUpIndex.ContainsKey(id)).Select(id => localLookUpIndex[id]).ToList();}
+        else {return remoteQueue.Where(id => remoteLookUpIndex.ContainsKey(id)).Select(id => remoteLookUpIndex[id]).ToList();}
     }
 
-    public void SortQueue(QueueState orderMethod, int? seed = null)
+    public void SortQueue(QueueType type, QueueState orderMethod, int? seed = null)
     {
-        List<Song> orderedList = LookUpIndex.Values.ToList();
+        List<Song> orderedList = type == QueueType.Local ? localLookUpIndex.Values.ToList() : remoteLookUpIndex.Values.ToList();
         
-        _logger.LogDebug("Sorting queue. SortMethod: {OrderMethod}, HasSeed: {HasSeed}", orderMethod, seed.HasValue);
+        _logger.LogDebug("Sorting [{QueueType}] queue. SortMethod: {OrderMethod}, HasSeed: {HasSeed}", type, orderMethod, seed.HasValue);
 
         switch (orderMethod)
         {
@@ -114,100 +138,149 @@ public class QueueManagerService : IQueueManagerService
                 break;
         }
 
-        _Queue = orderedList.Select(s => s.Id).ToList();
+        if (type == QueueType.Local) {localQueue = orderedList.Select(s => s.Id).ToList();}
+        else {remoteQueue = orderedList.Select(s => s.Id).ToList();}
         
         _logger.LogInformation("Successfully sorted queue by: {OrderMethod}", orderMethod);
     }
     
     public void OnSongEnd(object? sender, EventArgs e)
     {
+        var audio = _serviceProvider.GetRequiredService<IAudioService>();
         _logger.LogDebug("LibVLC event recived: Executing queue manger for next task.");
         // Safe offloading strictly for the LibVLC native thread deadlock
-        Task.Run(async () => await PlayTrackAsync(PlaybackDirection.AutoEvent));
+        Task.Run(async () => await PlayTrackAsync(PlaybackDirection.AutoEvent, audio.IsPlayingLocalSong ? QueueType.Local : QueueType.Remote));
+    }
+
+    public void OnSongError(object? sender, EventArgs e)
+    {
+        var audio = _serviceProvider.GetRequiredService<IAudioService>();
+        _logger.LogError("LibVLC native playback error encountered. Auto-recovering queue...");
+        
+        // If the user was trying to go backward, maintain that momentum past the broken song (it always go back on other apps T-T)
+        PlaybackDirection recoveryDirection = (_lastDirection == PlaybackDirection.Backward) ? PlaybackDirection.Backward : PlaybackDirection.Forward;
+
+        _logger.LogInformation("Error recovery directing queue: {Direction}", recoveryDirection);
+
+        Task.Run(async () => await PlayTrackAsync(recoveryDirection, audio.IsPlayingLocalSong ? QueueType.Local : QueueType.Remote));
     }
 
     public async Task PlayNextAsync()
     {
+        var audio = _serviceProvider.GetRequiredService<IAudioService>();
         _logger.LogDebug("Manual request received: Skipping to next track.");
-        await PlayTrackAsync(PlaybackDirection.Forward);
+        await PlayTrackAsync(PlaybackDirection.Forward, audio.IsPlayingLocalSong ? QueueType.Local : QueueType.Remote);
     }
 
     public async Task PlayPreviousAsync()
     {
+        var audio = _serviceProvider.GetRequiredService<IAudioService>();
         _logger.LogDebug("Manual request received: Skipping to previous track.");
-        await PlayTrackAsync(PlaybackDirection.Backward);
+        await PlayTrackAsync(PlaybackDirection.Backward, audio.IsPlayingLocalSong ? QueueType.Local : QueueType.Remote);
     }
 
-    private async Task PlayTrackAsync(PlaybackDirection direction)
+    private async Task PlayTrackAsync(PlaybackDirection direction, QueueType type)
     {
-        try
+        _lastDirection = direction;
+        
+        var _Queue = type == QueueType.Local ? localQueue : remoteQueue;
+        
+        if (_Queue.Count == 0)
         {
-            var audio = _serviceProvider.GetRequiredService<IAudioService>();
-            Guid currentId = audio.CurrentSongID;
+            _logger.LogWarning("Playback navigation halted: The [{QueueType}] queue is empty.", type);
+            return;
+        }
 
-            int currentIndex = _Queue.IndexOf(currentId);
-            if (currentIndex == -1)
-            {
-                _logger.LogWarning("Playback navigation halted: Current song ID {SongId} was not found in active queue.", currentId);
-                return;
-            }
+        var audio = _serviceProvider.GetRequiredService<IAudioService>();
+        Guid currentId = audio.CurrentSongID;
+        int currentIndex = _Queue.IndexOf(currentId);
 
-            int targetIndex = currentIndex;
+        // If current song isn't found, default to start of the queue
+        if (currentIndex == -1)
+        {
+            currentIndex = 0;
+        }
 
-            // Handle UI Forced Skips vs Automated Ending Rules
-            if (direction == PlaybackDirection.AutoEvent && playerState.changeState == ChangeState.LoopOnce)
+        int targetIndex = currentIndex;
+
+        // Calculate initial target index based on intended direction
+        if (direction == PlaybackDirection.AutoEvent && playerState.changeState == ChangeState.LoopOnce)
+        {
+            _logger.LogInformation("Playback loop condition matched: [LoopOnce]. Re-playing current index.");
+        }
+        else if (direction == PlaybackDirection.Backward)
+        {
+            targetIndex = currentIndex - 1;
+            if (targetIndex < 0) targetIndex = _Queue.Count - 1;
+        }
+        else // Forward or AutoEvent
+        {
+            targetIndex = currentIndex + 1;
+            if (targetIndex >= _Queue.Count)
             {
-                _logger.LogInformation("Playback loop condition matched: [LoopOnce]. Re-playing song of index: {CurrentIndex}", currentIndex);
-                targetIndex = currentIndex;
-            }
-            else if (direction == PlaybackDirection.Backward)
-            {
-                targetIndex = currentIndex - 1;
-                
-                if (targetIndex < 0)
+                if (playerState.changeState == ChangeState.Loop || direction != PlaybackDirection.AutoEvent)
                 {
-                    targetIndex = _Queue.Count - 1;
-                    _logger.LogDebug("Navigation index wrapped around to end of song queue: Index {TargetIndex}", targetIndex);
+                    targetIndex = 0;
+                }
+                else
+                {
+                    _logger.LogInformation("Reached the end of the playback queue.");
+                    return;
                 }
             }
-            else // PlaybackDirection.Forward OR (AutoEvent with NoLoop/Loop)
-            {
-                targetIndex = currentIndex + 1;
+        }
 
-                if (targetIndex >= _Queue.Count)
-                {
-                    if (playerState.changeState == ChangeState.Loop || direction != PlaybackDirection.AutoEvent) 
-                    {
-                        targetIndex = 0; 
-                        _logger.LogDebug("Navigation index reset back to start: Index 0. LoopState: {LoopState}", playerState.changeState);
-                    }
-                    else 
-                    {
-                        _logger.LogInformation("Reached the end of the playback queue");
-                        return; 
-                    }
-                }
-            }
-            
+        int step = (direction == PlaybackDirection.Backward) ? -1 : 1;
+        int attempts = 0;
+        int maxAttempts = _Queue.Count;
+        bool playbackSuccessful = false;
+
+        // Loop through the queue until a track plays successfully or we run out of tracks 
+        while (!playbackSuccessful && attempts < maxAttempts)
+        {
             Guid nextSongId = _Queue[targetIndex];
-            Song? nextSong = FindSongByIdFromQueue(nextSongId);
+            Song? nextSong = FindSongByIdFromQueue(nextSongId, type);
 
             if (nextSong != null)
             {
-                _logger.LogInformation("Transitioning to next song. Direction: {Direction}, Index: {OldIndex} -> {NewIndex}, Title: {SongTitle}", direction, currentIndex, targetIndex, nextSong.Title);
+                try
+                {
+                    _logger.LogInformation("Attempting to play track. Index: {Index}, Title: {Title}", targetIndex, nextSong.Title);
+                    
+                    if (type == QueueType.Local) 
+                    {
+                        await audio.LoadAsync(nextSong.FilePath);
+                    }
+                    else 
+                    {
+                        await audio.LoadRemoteAsync($"{nextSong.FilePath}/stream/{nextSong.Id}");
+                    }
+                    
+                    await audio.PlayAsync(nextSong);
 
-                audio.CurrentSongID = nextSongId; 
-                await audio.LoadAsync(nextSong.FilePath); 
-                await audio.PlayAsync(nextSong);
+                    audio.CurrentSongID = nextSongId;
+                    playbackSuccessful = true; // Exits the loop safely
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load track '{Title}' at index {Index}. Host might be offline. Skipping...", nextSong.Title, targetIndex);
+                    
+                    // Maintain original navigation direction when skipping bad tracks
+                    targetIndex = (targetIndex + step + _Queue.Count) % _Queue.Count;
+                    attempts++;
+                }
             }
             else
             {
-                _logger.LogError("Expected song at index {TargetIndex} but object was null.", targetIndex);
+                _logger.LogWarning("Expected song at index {Index} was null. Skipping...", targetIndex);
+                targetIndex = (targetIndex + step + _Queue.Count) % _Queue.Count;
+                attempts++;
             }
         }
-        catch (System.Exception ex)
+
+        if (!playbackSuccessful)
         {
-            _logger.LogCritical(ex, "Playback navigation failed.");
+            _logger.LogCritical("Playback stopped: All tracks in the queue failed to load or devices are completely unreachable.");
         }
     }
 }

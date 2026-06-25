@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using EchoNet.Utils;
+using EchoNet.ViewModels;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -64,9 +65,9 @@ public class AppInitializationService : IHostedService
 
             _queueManager.SetPlayerState(playerState);
             // fetch and build the collection baseline first
-            await _queueManager.GenerateQueue();
+            await _queueManager.GenerateQueue(QueueType.Local);
             // now sort or seed-shuffle the freshly loaded items
-            _queueManager.SortQueue(playerState.queueState, seed);
+            _queueManager.SortQueue(QueueType.Local, playerState.queueState, seed);
 
             // -- loading finished! Mark as ready --
             _logger.LogInformation("Previous session successfully restored.");

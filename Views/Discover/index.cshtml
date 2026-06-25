@@ -1,1 +1,45 @@
-<h1>Discover</h1>
+<link rel="stylesheet" href="~/css/discover/_discover.css" asp-append-version="true"/>
+<link rel="stylesheet" href="~/css/discover/songs.css" asp-append-version="true"/>
+
+<div class="discover-page">
+  <partial name="songs" />
+
+  <aside class="rightbar" aria-label="Network device scanner">
+    <div class="rightbar-head">
+      <div class="head-title">
+        <span class="dot-live" aria-hidden="true"></span>
+        <h1>Network Scan</h1>
+      </div>
+      <p class="head-sub">searching local network for players</p>
+    </div>
+
+    <div class="radar-stage">
+      <div class="radar-circle" id="radarCircle">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-3"></div>
+        <div class="ring ring-4"></div>
+        <div class="spoke spoke-1"></div>
+        <div class="spoke spoke-2"></div>
+        <div class="spoke spoke-3"></div>
+        <div class="spoke spoke-4"></div>
+        <div class="ticks-layer" id="ticksLayer"></div>
+        <div class="sweep-wedge" aria-hidden="true"></div>
+        <div class="sweep-line" aria-hidden="true"></div>
+        <div class="center-dot" aria-hidden="true"></div>
+        <div class="dots-layer" id="dotsLayer"></div>
+      </div>
+      <div class="tooltip" id="tooltip" role="tooltip">
+        <div class="tt-name" id="ttName"></div>
+        <div class="tt-meta">
+          <span id="ttIp"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="devices-panel">
+      <ul class="device-list" id="deviceList"></ul>
+    </div>
+  </aside>
+</div>
+<script type="module" src="~/js/discover/_discover.js" asp-append-version="true"></script>

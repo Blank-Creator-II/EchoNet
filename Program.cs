@@ -25,6 +25,18 @@ builder.WebHost.UseUrls("http://0.0.0.0:9292");
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Add LAN CORS policies
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLANPlayer", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // Add SignalR framework services
 builder.Services.AddSignalR();
 // Add app state container for state checking
@@ -68,6 +80,9 @@ app.Lifetime.ApplicationStopped.Register(() =>
 app.UseStaticFiles();
 
 app.UseRouting();
+
+// Add CORS middleware 
+app.UseCors("AllowLANPlayer");
 
 app.UseAuthorization();
 

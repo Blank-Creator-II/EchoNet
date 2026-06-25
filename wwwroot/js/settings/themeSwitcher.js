@@ -6,8 +6,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const root = document.documentElement;
 
+    // We grab the initial system mode from the first card so we know what to reset to
+    const firstCard = document.querySelector('.canvas-wrapper');
+    const initialMode = firstCard ? firstCard.dataset.currentThemeMode : 'light';
+
     originalTheme = {
         name: document.getElementById("active-name").textContent.trim(),
+        mode: initialMode,
 
         background: getComputedStyle(root).getPropertyValue('--bg'),
         surface: getComputedStyle(root).getPropertyValue('--surface'),
@@ -72,12 +77,18 @@ function applyTheme(theme) {
     root.style.setProperty('--disabled-text', theme.disabledText);
 
     document.getElementById("active-name").textContent = theme.name;
+
+    // Broadcast the change to the cards
+    window.dispatchEvent(new CustomEvent('themePreviewChanged', {
+        detail: { mode: theme.mode }
+    }));
 }
 
 window.selectTheme = function (card) {
 
     selectedTheme = {
         name: card.dataset.theme,
+        mode: card.dataset.mode,
 
         background: card.dataset.background,
         surface: card.dataset.surface,
@@ -117,7 +128,7 @@ document.getElementById('btn-resetTheme').addEventListener('click', () => {
     applyTheme(originalTheme);
     
     selectedTheme = null;
-    Toast.show('Theme reseted')
+    Toast.show('Theme reset')
 });
 
 async function saveTheme() {
@@ -143,6 +154,7 @@ async function saveTheme() {
 
     } catch (err) {
         console.error(err);
+        Toast.show('Failed to save theme');
     }
 }
 

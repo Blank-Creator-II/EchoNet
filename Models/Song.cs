@@ -26,4 +26,10 @@ public class Song
 
     [NotMapped]
     public string CoverArtDirectory => $"/data/cover/{Id}";
+    [NotMapped]
+    public string FormattedDuration => Duration.ToString(@"m\:ss");
+    [NotMapped]
+    public string FormattedCreatedAt => CreatedAt.ToString("o");
+    [NotMapped]
+    public bool IsLocal => FilePath.Contains("http://") ? false : true;  
 }

@@ -70,6 +70,7 @@ public class AppDataJsonReader
 
     public void UpdateInMemory(params (AppDataTarget Target, object DataValue)[] items)
     {
+        var appId = _currentData.AppId; // never get's updated unless app data is cleared on disk
         // Default to current states rather than re-querying active services every time
         var theme = _currentData.Theme;
         var _song = _currentData.song;
@@ -113,6 +114,7 @@ public class AppDataJsonReader
 
         _currentData = new AppData 
         {
+            AppId = appId,
             Theme = theme,
             song = _song,
             Position = position,
@@ -131,6 +133,9 @@ public class AppDataJsonReader
     public async Task SaveAsync(AppData? dataToSave = null)
     {
         var data = dataToSave ?? _currentData;
+
+        // if the saved song data was a remote one replace it with a default data
+        if(!data.song.IsLocal) {data.song = new Song{};}
         
         await _fileLock.WaitAsync();
         try

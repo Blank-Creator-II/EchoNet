@@ -56,13 +56,70 @@ public class PlayerController : Controller
             return StatusCode(500, "An error occurred during playback.");
         }
 
-        return Ok(new
-        {
-            success = true,
-            isPlaying = true,
+        return Ok();
+    }
 
-            song = _song
-        });
+    [HttpPost("Player/PlayRemote")]
+    public async Task<IActionResult> PlayRemote([FromBody] RemotePlayRequest request)
+    {
+        if (request.songDTO == null)
+        {
+            _logger.LogWarning("Remote play request failed: Song was null.");
+            return NotFound();
+        }
+        
+        _logger.LogInformation("Remote play request received with ID: {SongId}", request.songDTO.Id);
+
+        _audio.CurrentSongID = request.songDTO.Id;
+
+        var streamUrl = $"{request.songDTO.HostUrl}/stream/{request.songDTO.Id}";
+
+        try
+        {
+            await _audio.LoadRemoteAsync(streamUrl);
+            await _audio.PlayAsync(request.songDTO.ToSong());
+            _logger.LogInformation("Successfully playing stream: {FilePath}", streamUrl);
+
+            // update queue from local to remote queue
+            List<Song> remoteQueue = new List<Song>{};
+            foreach (SongDTO songDTO in request.songDTOs)
+            {
+                remoteQueue.Add(songDTO.ToSong());
+            }
+            await _queueManager.GenerateQueue(QueueType.Remote,remoteQueue);
+            _queueManager.SortQueue(QueueType.Remote, _appDataReader.Current.playerState.queueState, _appDataReader.Current.ShuffleSeed);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while attempting to load or play stream: {FilePath}", streamUrl);
+            return StatusCode(500, "An error occurred during playback.");
+        }
+
+        return Ok();
+    }
+
+    [HttpPost("Player/UpdateRemoteQueue")]
+    public async Task<IActionResult> UpdateRemoteQueue([FromBody] List<SongDTO> updatedSongs)
+    {
+        if (updatedSongs == null)
+        {
+            return BadRequest("Song DTO array cannot be null.");
+        }
+
+        List<Song> remoteQueue = new List<Song>{};
+        foreach (SongDTO songDTO in updatedSongs)
+        {
+            remoteQueue.Add(songDTO.ToSong());
+        }
+        bool success = await _queueManager.GenerateQueue(QueueType.Remote, remoteQueue);
+        _queueManager.SortQueue(QueueType.Remote, _appDataReader.Current.playerState.queueState, _appDataReader.Current.ShuffleSeed);
+        
+        if (!success)
+        {
+            return StatusCode(500, "Error updating back-end remote context queue mappings.");
+        }
+
+        return Ok();
     }
 
     [HttpPost("Player/TogglePlay")]
@@ -201,8 +258,8 @@ public class PlayerController : Controller
             });
         }
 
-        await _queueManager.GenerateQueue();
-        _queueManager.SortQueue(_appDataReader.Current.playerState.queueState, _appDataReader.Current.ShuffleSeed);
+        await _queueManager.GenerateQueue(QueueType.Local);
+        _queueManager.SortQueue(QueueType.Local, _appDataReader.Current.playerState.queueState, _appDataReader.Current.ShuffleSeed);
 
         _logger.LogInformation("Library scan successfully completed and queue generated.");
 
@@ -243,7 +300,8 @@ public class PlayerController : Controller
 
         _queueManager.SetPlayerState(newPlayerState);
         int seed = Random.Shared.Next(int.MinValue, int.MaxValue); // generate seed for shuffling between -2,147,483,648 and 2,147,483,647
-        _queueManager.SortQueue(newQueueState,seed); // Sort queue
+        _queueManager.SortQueue(QueueType.Local, newQueueState, seed); // Sort local queue
+        _queueManager.SortQueue(QueueType.Remote, newQueueState, seed); // Sort remote queue
 
         _appDataReader.UpdateInMemory([(AppDataTarget.PlayerState, newPlayerState),(AppDataTarget.ShuffleSeed, seed)]);
         _logger.LogInformation("Shuffle toggled. Shuffled: {IsShuffled}. Queue State: {QueueState}. Seed assigned: {Seed}", _IsShuffled, newQueueState, seed);

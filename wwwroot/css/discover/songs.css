@@ -1,15 +1,12 @@
-/* Inherit layout font & remove any body-level overrides */
-.songs-page {
+/* ---------- MAIN PANEL ---------- */
+.remote-song-panel {
+    position: relative;
     width: 100%;
-    height: 100%;               /* fill the .content area */
+    height: 100%;
     display: flex;
     flex-direction: column;
     background: var(--bg);
     overflow: hidden;
-}
-
-.content {
-    padding: 0px;
 }
 
 /* ── HEADER ── */
@@ -211,7 +208,7 @@
 
 .songs-table .song-row:hover,
 .songs-table .song-row.focused {
-    background: var(--surface-2);   /* lighter surface shade */
+    background: var(--surface-2); 
     transform: translateY(-1px);
     box-shadow: 0 0 0 1px var(--border), 0 6px 18px color-mix(in srgb, var(--bg) 15%, transparent);
 }
@@ -260,7 +257,6 @@
     transition: opacity 0.15s;
 }
 
-/* Handles swapping index numbers for play icons on both hover and focus */
 .songs-table .song-row:hover .row-num,
 .songs-table .song-row.focused .row-num { opacity: 0; }
 
@@ -466,7 +462,7 @@
 
 .song-card.playing:hover .card-play-overlay,
 .song-card.playing.focused .card-play-overlay {
-    opacity: 0; /* Ensures EQ stays visible on hover/focus when playing */
+    opacity: 0;
 }
 
 .card-info {
@@ -503,7 +499,6 @@
 }
 
 
-/* ── RESPONSIVE ── */
 @media (max-width: 768px) {
     .songs-page { height: 100%; }   
     .header-nav { padding: 12px 14px; }

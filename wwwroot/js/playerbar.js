@@ -50,6 +50,10 @@ const audioConnection = new signalR.HubConnectionBuilder()
     .withAutomaticReconnect() // Automatically handles dropouts
     .build();
 
+audioConnection.on("ReceiveLanDevice", (data) => {
+    window.dispatchEvent(new CustomEvent('LanDeviceUpdated', { detail: data }));
+});
+
 // Handle stream updates sent directly from VLC's TimeChanged event
 audioConnection.on("ReceiveStatus", (data) => {
     window.__playerStatus = data;
@@ -486,8 +490,9 @@ async function updateSongInfo(song) {
     if (coverArtContainer) {
         // If cover art exists and isn't just an empty string/null
         if (song.hasCoverArt) {
+            var coverUrl = song.isLocal ? `${song.coverArtDirectory}_256.jpg` : `${song.filePath}/coverArt/${song.id}/256`
             coverArtContainer.innerHTML = `
-                <img class="song-thumb" src="${song.coverArtDirectory}_256.jpg" alt="" loading="lazy" />
+                <img class="song-thumb" src="${coverUrl}" alt="" loading="lazy" />
             `;
         } else {
             // Fallback placeholder directly if no string data is returned

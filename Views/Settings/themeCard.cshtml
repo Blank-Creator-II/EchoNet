@@ -1,50 +1,52 @@
-@model EchoNet.Models.Theme
+@model (EchoNet.Models.Theme cardTheme, EchoNet.Models.Theme currentTheme)
 
 @{
-    string[]? parts = Model.Name.Split(separator: ' ', StringSplitOptions.RemoveEmptyEntries);
+    string[]? parts = Model.cardTheme.Name.Split(separator: ' ', StringSplitOptions.RemoveEmptyEntries);
     string? firstPart = parts.FirstOrDefault();
     string? lastPart = parts.LastOrDefault();
 }
 
-<aside>
+<div class="theme-card">
   <div class="container">
     <div class="canvas-wrapper"
         onclick="selectTheme(this)"
-        data-theme="@Model.Name"
-        data-mode="@Model.Mode"
+        data-theme="@Model.cardTheme.Name"
+        data-mode="@Model.cardTheme.Mode"
 
-        data-background="@Model.Background"
-        data-surface="@Model.Surface"
-        data-surface-alt="@Model.SurfaceAlt"
+        data-background="@Model.cardTheme.Background"
+        data-surface="@Model.cardTheme.Surface"
+        data-surface-alt="@Model.cardTheme.SurfaceAlt"
 
-        data-text="@Model.Text"
-        data-muted-text="@Model.MutedText"
+        data-text="@Model.cardTheme.Text"
+        data-muted-text="@Model.cardTheme.MutedText"
 
-        data-accent="@Model.Accent"
-        data-accent-hover="@Model.AccentHover"
-        data-accent-active="@Model.AccentActive"
+        data-accent="@Model.cardTheme.Accent"
+        data-accent-hover="@Model.cardTheme.AccentHover"
+        data-accent-active="@Model.cardTheme.AccentActive"
 
-        data-border="@Model.Border"
-        data-border-hover="@Model.BorderHover"
-        data-border-focus="@Model.BorderFocus"
+        data-border="@Model.cardTheme.Border"
+        data-border-hover="@Model.cardTheme.BorderHover"
+        data-border-focus="@Model.cardTheme.BorderFocus"
 
-        data-focus-ring="@Model.FocusRing"
-        data-text-on-accent="@Model.TextOnAccent"
+        data-focus-ring="@Model.cardTheme.FocusRing"
+        data-text-on-accent="@Model.cardTheme.TextOnAccent"
 
-        data-button-secondary-bg="@Model.ButtonSecondaryBg"
-        data-button-secondary-hover-bg="@Model.ButtonSecondaryHoverBg"
-        data-button-secondary-text="@Model.ButtonSecondaryText"
+        data-button-secondary-bg="@Model.cardTheme.ButtonSecondaryBg"
+        data-button-secondary-hover-bg="@Model.cardTheme.ButtonSecondaryHoverBg"
+        data-button-secondary-text="@Model.cardTheme.ButtonSecondaryText"
 
-        data-input-bg="@Model.InputBg"
-        data-input-placeholder="@Model.InputPlaceholder"
+        data-input-bg="@Model.cardTheme.InputBg"
+        data-input-placeholder="@Model.cardTheme.InputPlaceholder"
 
-        data-disabled-bg="@Model.DisabledBg"
-        data-disabled-text="@Model.DisabledText"
+        data-disabled-bg="@Model.cardTheme.DisabledBg"
+        data-disabled-text="@Model.cardTheme.DisabledText"
+
+        data-current-Theme-Mode="@Model.currentTheme.Mode"
         style="
-          --card-accent: @Model.Accent;
-          --card-bg: @Model.Background;
-          --card-surface: @Model.Surface;
-          --card-mode: '@Model.Mode';">
+          --card-accent: @Model.cardTheme.Accent;
+          --card-bg: @Model.cardTheme.Background;
+          --card-surface: @Model.cardTheme.Surface;
+          --card-mode: '@Model.cardTheme.Mode';">
       <canvas class="fc"></canvas>
 
       <div class="card-label top-label">
@@ -56,6 +58,4 @@
       </div>
     </div>
   </div>
-
-  <script src="~/js/settings/themeCard.js"></script>
-</aside>
+</div>

@@ -35,10 +35,10 @@
     async function sortSongs(type) {
         switch (type) {
             case 'newest':
-                songs.sort(function (a, b) { return b.CreatedAt.localeCompare(a.CreatedAt); });
+                songs.sort(function (a, b) { return b.FormattedCreatedAt.localeCompare(a.FormattedCreatedAt); });
                 break;
             case 'oldest':
-                songs.sort(function (a, b) { return a.CreatedAt.localeCompare(b.CreatedAt); });
+                songs.sort(function (a, b) { return a.FormattedCreatedAt.localeCompare(b.FormattedCreatedAt); });
                 break;
             case 'az':
                 songs.sort(function (a, b) { return a.Title.localeCompare(b.Title, 'en', { sensitivity: 'base' }); });
@@ -47,7 +47,7 @@
                 songs.sort(function (a, b) { return b.Title.localeCompare(a.Title, 'en', { sensitivity: 'base' }); });
                 break;
             default:
-                songs.sort(function (a, b) { return b.CreatedAt.localeCompare(a.CreatedAt); });
+                songs.sort(function (a, b) { return b.FormattedCreatedAt.localeCompare(a.FormattedCreatedAt); });
         }
         render();
         syncPlayingRow();
